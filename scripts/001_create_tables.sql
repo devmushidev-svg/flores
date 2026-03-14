@@ -1,5 +1,15 @@
 -- Flower Shop Management Database Schema
 
+-- Table: clientes (customers for autocomplete)
+CREATE TABLE IF NOT EXISTS clientes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  telefono TEXT NOT NULL UNIQUE,
+  nombre TEXT NOT NULL,
+  direccion TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- Table: flores (flowers with prices)
 CREATE TABLE IF NOT EXISTS flores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -80,3 +90,9 @@ CREATE POLICY "Allow public read pedidos" ON pedidos FOR SELECT USING (true);
 CREATE POLICY "Allow public insert pedidos" ON pedidos FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public update pedidos" ON pedidos FOR UPDATE USING (true);
 CREATE POLICY "Allow public delete pedidos" ON pedidos FOR DELETE USING (true);
+
+ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read clientes" ON clientes FOR SELECT USING (true);
+CREATE POLICY "Allow public insert clientes" ON clientes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update clientes" ON clientes FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete clientes" ON clientes FOR DELETE USING (true);
