@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { uploadToCloudinary } from "@/lib/cloudinary"
+import { isHeicFormat } from "@/lib/image-converter"
 import type { Flor, ArregloWithFlores, ArregloFlor } from "@/lib/types"
 
 interface FlorItem {
@@ -52,6 +53,7 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
   const [floresSeleccionadas, setFloresSeleccionadas] = useState<FlorItem[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState<string>("")
 
   const isEditing = !!arreglo
 
@@ -117,11 +119,21 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
 
     setIsUploading(true)
     try {
+      // Show appropriate status based on file type
+      if (isHeicFormat(file)) {
+        setUploadStatus("Convirtiendo imagen...")
+      } else {
+        setUploadStatus("Subiendo...")
+      }
+      
       const result = await uploadToCloudinary(file)
       setFotoUrl(result.url)
+      setUploadStatus("")
     } catch (error) {
       console.error("Error uploading image:", error)
-      alert("Error al subir la imagen. Verifica tu configuracion de Cloudinary.")
+      const errorMessage = error instanceof Error ? error.message : "Error al subir la imagen"
+      alert(errorMessage)
+      setUploadStatus("")
     } finally {
       setIsUploading(false)
     }
@@ -175,7 +187,7 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
                 <label className="cursor-pointer">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif"
                     className="hidden"
                     onChange={handleImageUpload}
                     disabled={isUploading}
@@ -185,7 +197,7 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
                       {isUploading ? (
                         <>
                           <Spinner className="mr-2 h-4 w-4" />
-                          Subiendo...
+                          {uploadStatus || "Subiendo..."}
                         </>
                       ) : (
                         <>

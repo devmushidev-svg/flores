@@ -1,3 +1,5 @@
+import { processImageForUpload, isHeicFormat } from "./image-converter"
+
 interface UploadResult {
   url: string
   publicId: string
@@ -5,11 +7,17 @@ interface UploadResult {
 
 /**
  * Uploads an image to Cloudinary using unsigned upload preset
- * Hardcoded values for client-side upload
+ * Automatically handles HEIC conversion for iOS compatibility
  */
 export async function uploadToCloudinary(file: File): Promise<UploadResult> {
+  // Convert HEIC to JPEG if needed
+  let processedFile = file
+  if (isHeicFormat(file)) {
+    processedFile = await processImageForUpload(file)
+  }
+  
   const formData = new FormData()
-  formData.append("file", file)
+  formData.append("file", processedFile)
   formData.append("upload_preset", "arreglos")
 
   const response = await fetch(
