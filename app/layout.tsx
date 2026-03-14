@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
@@ -6,26 +6,41 @@ import './globals.css'
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#e11d73',
+}
+
 export const metadata: Metadata = {
   title: 'Floreria - Gestión de Pedidos',
   description: 'Sistema de gestión para florería: flores, arreglos y pedidos',
   generator: 'v0.app',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Floreria',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
+        url: '/icons/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
       },
       {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: '/icons/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
       },
     ],
-    apple: '/apple-icon.png',
+    apple: '/icons/icon-192.png',
   },
 }
 
