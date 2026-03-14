@@ -125,6 +125,16 @@ export function PedidosList() {
     mutatePedidos()
   }
 
+  const handleStatusChange = async (id: string, estado: EstadoPedido) => {
+    const supabase = createClient()
+    const { error } = await supabase
+      .from("pedidos")
+      .update({ estado })
+      .eq("id", id)
+    if (error) throw error
+    mutatePedidos()
+  }
+
   const handleEdit = (pedido: Pedido) => {
     setEditingPedido(pedido)
   }
@@ -193,6 +203,7 @@ export function PedidosList() {
               pedido={pedido}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onStatusChange={handleStatusChange}
             />
           ))}
         </div>

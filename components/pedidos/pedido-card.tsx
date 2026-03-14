@@ -28,6 +28,7 @@ interface PedidoCardProps {
   pedido: Pedido
   onEdit: (pedido: Pedido) => void
   onDelete: (id: string) => Promise<void>
+  onStatusChange?: (id: string, estado: Pedido['estado']) => Promise<void>
 }
 
 function formatDate(dateStr: string) {
@@ -65,9 +66,17 @@ function createWhatsAppLink(telefono: string, message: string): string {
   return `https://wa.me/${phone}?text=${encodedMessage}`
 }
 
-export function PedidoCard({ pedido, onEdit, onDelete }: PedidoCardProps) {
+export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange }: PedidoCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isChangingStatus, setIsChangingStatus] = useState(false)
+
+  const handleStatusChange = async (newStatus: Pedido['estado']) => {
+    if (!onStatusChange || newStatus === pedido.estado) return
+    setIsChangingStatus(true)
+    await onStatusChange(pedido.id, newStatus)
+    setIsChangingStatus(false)
+  }
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -143,6 +152,53 @@ export function PedidoCard({ pedido, onEdit, onDelete }: PedidoCardProps) {
           {pedido.mensaje_tarjeta && (
             <div className="text-xs italic text-muted-foreground bg-muted/50 rounded p-2">
               "{pedido.mensaje_tarjeta}"
+            </div>
+          )}
+
+          {/* Quick status buttons */}
+          {onStatusChange && pedido.estado !== 'Entregado' && pedido.estado !== 'Cancelado' && (
+            <div className="flex flex-wrap gap-1.5 pt-2 border-t">
+              <span className="text-xs text-muted-foreground w-full mb-1">Cambiar estado:</span>
+              {pedido.estado === 'Pendiente' && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="h-7 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                  onClick={() => handleStatusChange('En preparación')}
+                  disabled={isChangingStatus}
+                >
+                  En preparación
+                </Button>
+              )}
+              {(pedido.estado === 'Pendiente' || pedido.estado === 'En preparación') && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="h-7 text-xs bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                  onClick={() => handleStatusChange('En ruta')}
+                  disabled={isChangingStatus}
+                >
+                  En ruta
+                </Button>
+              )}
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="h-7 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                onClick={() => handleStatusChange('Entregado')}
+                disabled={isChangingStatus}
+              >
+                Entregado
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="h-7 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                onClick={() => handleStatusChange('Cancelado')}
+                disabled={isChangingStatus}
+              >
+                Cancelar
+              </Button>
             </div>
           )}
 
