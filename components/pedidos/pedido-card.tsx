@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Trash2, Phone, MapPin, Calendar, Clock, MessageCircle, Send, Truck } from "lucide-react"
+import { Pencil, Trash2, Phone, MapPin, Calendar, Clock, MessageCircle, Send, Truck, Printer } from "lucide-react"
+import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -85,6 +86,166 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange }: PedidoC
     setShowDeleteDialog(false)
   }
 
+  // Print thermal receipt
+  const handlePrintReceipt = () => {
+    const fechaEntrega = formatDateLong(pedido.fecha_entrega)
+    const horaEntrega = pedido.hora_entrega ? formatTime(pedido.hora_entrega) : "No especificada"
+    const arregloNombre = pedido.arreglos?.nombre || "Arreglo personalizado"
+    const arregloFoto = pedido.arreglos?.foto_url
+    
+    const printWindow = window.open("", "_blank", "width=300,height=600")
+    if (!printWindow) return
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Pedido N${pedido.numero_pedido}</title>
+        <style>
+          @page { margin: 0; size: 80mm auto; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            width: 80mm;
+            padding: 8px;
+            line-height: 1.4;
+          }
+          .header { text-align: center; margin-bottom: 12px; border-bottom: 2px dashed #000; padding-bottom: 10px; }
+          .logo { width: 60px; height: 60px; margin: 0 auto 8px; }
+          .logo img { width: 100%; height: 100%; object-fit: contain; }
+          .business-name { font-size: 16px; font-weight: bold; text-transform: uppercase; }
+          .business-info { font-size: 10px; margin-top: 4px; }
+          .order-number { font-size: 20px; font-weight: bold; margin: 12px 0; text-align: center; background: #000; color: #fff; padding: 8px; }
+          .section { margin: 10px 0; padding: 8px 0; border-bottom: 1px dashed #ccc; }
+          .section-title { font-weight: bold; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; }
+          .row { display: flex; justify-content: space-between; margin: 4px 0; }
+          .label { font-weight: bold; }
+          .value { text-align: right; max-width: 60%; }
+          .full-row { margin: 4px 0; }
+          .full-row .label { display: block; margin-bottom: 2px; }
+          .full-row .value { text-align: left; max-width: 100%; padding-left: 8px; }
+          .totals { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+          .totals .row { font-size: 13px; }
+          .totals .total-row { font-size: 16px; font-weight: bold; border-top: 1px solid #000; padding-top: 6px; margin-top: 6px; }
+          .footer { text-align: center; margin-top: 12px; font-size: 10px; border-top: 2px dashed #000; padding-top: 10px; }
+          .thank-you { font-weight: bold; font-size: 12px; margin-bottom: 4px; }
+          .arreglo-img { text-align: center; margin: 10px 0; }
+          .arreglo-img img { max-width: 100%; max-height: 120px; object-fit: contain; border: 1px solid #ddd; border-radius: 4px; }
+          .nota-box { background: #fff8e1; border: 1px solid #ffcc80; padding: 6px; margin: 6px 0; font-size: 11px; }
+          .tarjeta-box { background: #f5f5f5; border-left: 3px solid #666; padding: 6px; margin: 6px 0; font-style: italic; font-size: 11px; }
+          @media print {
+            body { width: 100%; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo">
+            <img src="/logo.png" alt="Logo" onerror="this.style.display='none'" />
+          </div>
+          <div class="business-name">Multiplanet Floristeria</div>
+          <div class="business-info">
+            Barrio el centro, Tocoa Colon<br>
+            Segunda planta Multiplanet<br>
+            Tel: +504 95841794
+          </div>
+        </div>
+
+        <div class="order-number">PEDIDO N${pedido.numero_pedido}</div>
+
+        <div class="section">
+          <div class="section-title">Informacion del Cliente</div>
+          <div class="row">
+            <span class="label">Cliente:</span>
+            <span class="value">${pedido.cliente}</span>
+          </div>
+          ${pedido.telefono ? `
+          <div class="row">
+            <span class="label">Telefono:</span>
+            <span class="value">${pedido.telefono}</span>
+          </div>
+          ` : ""}
+          ${pedido.direccion ? `
+          <div class="full-row">
+            <span class="label">Direccion:</span>
+            <span class="value">${pedido.direccion}</span>
+          </div>
+          ` : ""}
+        </div>
+
+        <div class="section">
+          <div class="section-title">Detalles del Pedido</div>
+          <div class="row">
+            <span class="label">Fecha entrega:</span>
+            <span class="value">${fechaEntrega}</span>
+          </div>
+          <div class="row">
+            <span class="label">Hora:</span>
+            <span class="value">${horaEntrega}</span>
+          </div>
+          <div class="row">
+            <span class="label">Arreglo:</span>
+            <span class="value">${arregloNombre}</span>
+          </div>
+          ${arregloFoto ? `
+          <div class="arreglo-img">
+            <img src="${arregloFoto}" alt="${arregloNombre}" onerror="this.style.display='none'" />
+          </div>
+          ` : ""}
+          ${pedido.descripcion ? `
+          <div class="nota-box">
+            <strong>Nota:</strong> ${pedido.descripcion}
+          </div>
+          ` : ""}
+          ${pedido.mensaje_tarjeta ? `
+          <div class="tarjeta-box">
+            <strong>Mensaje tarjeta:</strong><br>"${pedido.mensaje_tarjeta}"
+          </div>
+          ` : ""}
+        </div>
+
+        <div class="totals">
+          <div class="section-title">Resumen de Pago</div>
+          <div class="row">
+            <span class="label">Total:</span>
+            <span class="value">L${pedido.precio_total.toFixed(2)}</span>
+          </div>
+          <div class="row">
+            <span class="label">Abono:</span>
+            <span class="value">L${pedido.abono.toFixed(2)}</span>
+          </div>
+          <div class="row total-row">
+            <span class="label">SALDO:</span>
+            <span class="value">L${pedido.saldo.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="row">
+            <span class="label">Estado:</span>
+            <span class="value">${pedido.estado}</span>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div class="thank-you">Gracias por su preferencia!</div>
+          <div>Multiplanet Floristeria</div>
+        </div>
+      </body>
+      </html>
+    `)
+    
+    printWindow.document.close()
+    printWindow.focus()
+    
+    // Wait for images to load then print
+    setTimeout(() => {
+      printWindow.print()
+    }, 500)
+  }
+
   // WhatsApp message generators
   const handleChatCliente = () => {
     if (!pedido.telefono) return
@@ -97,11 +258,11 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange }: PedidoC
     const fechaEntrega = formatDateLong(pedido.fecha_entrega)
     const horaEntrega = pedido.hora_entrega ? ` a las ${formatTime(pedido.hora_entrega)}` : ""
     const arregloNombre = pedido.arreglos?.nombre ? `\n\nArreglo: ${pedido.arreglos.nombre}` : ""
-    const descripcionText = pedido.descripcion ? `\nDescripción: ${pedido.descripcion}` : ""
+    const descripcionText = pedido.descripcion ? `\nNota: ${pedido.descripcion}` : ""
     const mensajeTarjeta = pedido.mensaje_tarjeta ? `\nMensaje de tarjeta: "${pedido.mensaje_tarjeta}"` : ""
     const direccionText = pedido.direccion ? `\nDirección de entrega: ${pedido.direccion}` : ""
     
-    const message = `¡Hola ${pedido.cliente}! Recibimos tu pedido para el ${fechaEntrega}${horaEntrega}.${arregloNombre}${descripcionText}${mensajeTarjeta}${direccionText}\n\nTotal: L${pedido.precio_total.toFixed(2)}\nAbono: L${pedido.abono.toFixed(2)}\nSaldo pendiente: L${pedido.saldo.toFixed(2)}\n\n¡Gracias por tu preferencia!`
+    const message = `¡Hola ${pedido.cliente}! Recibimos tu pedido N${pedido.numero_pedido} para el ${fechaEntrega}${horaEntrega}.${arregloNombre}${descripcionText}${mensajeTarjeta}${direccionText}\n\nTotal: L${pedido.precio_total.toFixed(2)}\nAbono: L${pedido.abono.toFixed(2)}\nSaldo pendiente: L${pedido.saldo.toFixed(2)}\n\n¡Gracias por tu preferencia!\n- Multiplanet Floristería`
     const url = createWhatsAppLink(pedido.telefono, message)
     window.open(url, "_blank")
   }
@@ -119,16 +280,35 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange }: PedidoC
     <>
       <Card className="overflow-hidden">
         <CardContent className="p-4 space-y-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
+          {/* Order number badge */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold bg-foreground text-background px-2 py-0.5 rounded">
+              N{pedido.numero_pedido}
+            </span>
+            <Badge className={ESTADO_COLORS[pedido.estado]}>
+              {pedido.estado}
+            </Badge>
+          </div>
+
+          <div className="flex items-start gap-3">
+            {/* Arrangement photo */}
+            {pedido.arreglos?.foto_url && (
+              <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
+                <Image
+                  src={pedido.arreglos.foto_url}
+                  alt={pedido.arreglos.nombre || "Arreglo"}
+                  width={64}
+                  height={64}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-foreground">{pedido.cliente}</h3>
               {pedido.arreglos && (
                 <p className="text-sm text-primary font-medium">{pedido.arreglos.nombre}</p>
               )}
             </div>
-            <Badge className={ESTADO_COLORS[pedido.estado]}>
-              {pedido.estado}
-            </Badge>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -227,6 +407,16 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange }: PedidoC
               )}
             </div>
             <div className="flex items-center gap-1">
+              {/* Print receipt */}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                onClick={handlePrintReceipt}
+              >
+                <Printer className="h-4 w-4" />
+                <span className="sr-only">Imprimir</span>
+              </Button>
               {/* WhatsApp dropdown */}
               {pedido.telefono && (
                 <DropdownMenu>

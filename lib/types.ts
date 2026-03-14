@@ -42,6 +42,7 @@ export interface ArregloWithFlores extends Arreglo {
 
 export interface Pedido {
   id: string
+  numero_pedido: number
   cliente: string
   telefono: string | null
   direccion: string | null
