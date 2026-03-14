@@ -140,12 +140,18 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     setShowClientSuggestions(false)
   }
 
-  // Handle arreglo selection
+  // Handle arreglo selection - preserve form state
   const handleArregloSelect = (arreglo: ArregloWithFlores | null) => {
     setSelectedArreglo(arreglo)
+    // Only update price if no price was set yet
     if (arreglo && !precioTotal) {
       setPrecioTotal(arreglo.precio_real.toString())
     }
+  }
+
+  // Handle arreglo selector open/close - preserve form state
+  const handleArregloSelectorOpen = (open: boolean) => {
+    setShowArregloSelector(open)
   }
 
   const handleClearArreglo = () => {
@@ -381,7 +387,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => setShowArregloSelector(true)}
+                        onClick={() => handleArregloSelectorOpen(true)}
                       >
                         Cambiar
                       </Button>
@@ -402,19 +408,19 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
                   type="button"
                   variant="outline"
                   className="w-full h-16 border-dashed"
-                  onClick={() => setShowArregloSelector(true)}
+                  onClick={() => handleArregloSelectorOpen(true)}
                 >
                   <span className="text-muted-foreground">Seleccionar del catálogo</span>
                 </Button>
               )}
             </div>
 
-            {/* Description */}
+            {/* Description - Nota para el arreglo */}
             <div className="space-y-2">
-              <Label htmlFor="descripcion">Descripción adicional</Label>
+              <Label htmlFor="descripcion">Nota para el arreglo</Label>
               <Textarea
                 id="descripcion"
-                placeholder="Notas o especificaciones..."
+                placeholder="Especificaciones del arreglo (colores, flores, tamaño...)"
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
                 rows={2}
@@ -423,7 +429,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
 
             {/* Card Message */}
             <div className="space-y-2">
-              <Label htmlFor="mensaje">Mensaje de tarjeta</Label>
+              <Label htmlFor="mensaje">Mensaje para la tarjeta</Label>
               <Textarea
                 id="mensaje"
                 placeholder="Mensaje para la tarjeta..."
@@ -521,7 +527,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
 
       <ArregloSelector
         open={showArregloSelector}
-        onOpenChange={setShowArregloSelector}
+        onOpenChange={handleArregloSelectorOpen}
         arreglos={arreglos}
         flores={flores}
         selectedArregloId={selectedArreglo?.id || null}

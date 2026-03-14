@@ -156,10 +156,17 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange }: PedidoC
             )}
           </div>
 
-          {/* Card message preview */}
+          {/* Nota para el arreglo (descripcion) */}
+          {pedido.descripcion && (
+            <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded p-2">
+              <span className="font-medium text-amber-700">Nota:</span> {pedido.descripcion}
+            </div>
+          )}
+
+          {/* Mensaje de tarjeta */}
           {pedido.mensaje_tarjeta && (
             <div className="text-xs italic text-muted-foreground bg-muted/50 rounded p-2">
-              "{pedido.mensaje_tarjeta}"
+              <span className="font-medium not-italic">Tarjeta:</span> &quot;{pedido.mensaje_tarjeta}&quot;
             </div>
           )}
 
