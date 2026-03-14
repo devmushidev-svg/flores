@@ -71,7 +71,11 @@ export function PedidosList() {
   const [showQuickForm, setShowQuickForm] = useState(false)
   const [editingPedido, setEditingPedido] = useState<Pedido | null>(null)
   const [filterEstado, setFilterEstado] = useState<EstadoPedido | "todos">("todos")
-  const [filterFecha, setFilterFecha] = useState<string | null>(null)
+  // Default to today's date to show today's orders first
+  const [filterFecha, setFilterFecha] = useState<string | null>(() => {
+    const today = new Date()
+    return today.toISOString().split("T")[0]
+  })
   const [showCalendar, setShowCalendar] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(() => new Date())
 
