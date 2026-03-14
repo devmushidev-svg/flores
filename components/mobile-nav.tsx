@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Home, Flower2, BookOpen, ShoppingBag, Calendar, BarChart3 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/", label: "Inicio", icon: Home },
