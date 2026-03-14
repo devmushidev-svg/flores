@@ -84,11 +84,12 @@ export function ReportesView() {
     }
   }, [period])
 
-  // Filter pedidos by period (using created_at)
+  // Filter pedidos by period (using fecha_entrega - delivery date)
   const filteredPedidos = useMemo(() => {
     return pedidos.filter(p => {
-      const createdAt = parseISO(p.created_at)
-      return isWithinInterval(createdAt, { start: dateRange.start, end: dateRange.end })
+      // Parse fecha_entrega (format: YYYY-MM-DD)
+      const fechaEntrega = parseISO(p.fecha_entrega)
+      return isWithinInterval(fechaEntrega, { start: dateRange.start, end: dateRange.end })
     })
   }, [pedidos, dateRange])
 
