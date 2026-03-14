@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/page-header"
 import { PedidoCard } from "./pedido-card"
 import { PedidoForm } from "./pedido-form"
 import { createClient } from "@/lib/supabase/client"
-import type { Arreglo, Pedido, EstadoPedido } from "@/lib/types"
+import type { Flor, ArregloWithFlores, Pedido, EstadoPedido } from "@/lib/types"
 import { ESTADOS_PEDIDO, ESTADO_COLORS } from "@/lib/types"
 
 async function fetchPedidos(): Promise<Pedido[]> {
@@ -28,10 +28,30 @@ async function fetchPedidos(): Promise<Pedido[]> {
   return data || []
 }
 
-async function fetchArreglos(): Promise<Arreglo[]> {
+async function fetchArreglosWithFlores(): Promise<ArregloWithFlores[]> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from("arreglos")
+    .select(`
+      *,
+      arreglo_flores (
+        id,
+        flor_id,
+        cantidad,
+        flores (*)
+      )
+    `)
+    .eq("is_active", true)
+    .order("nombre")
+  
+  if (error) throw error
+  return data || []
+}
+
+async function fetchFlores(): Promise<Flor[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("flores")
     .select("*")
     .eq("is_active", true)
     .order("nombre")
@@ -42,10 +62,15 @@ async function fetchArreglos(): Promise<Arreglo[]> {
 
 export function PedidosList() {
   const { data: pedidos, error: pedidosError, isLoading: pedidosLoading, mutate: mutatePedidos } = useSWR("pedidos", fetchPedidos)
-  const { data: arreglos, isLoading: arreglosLoading } = useSWR("arreglos-active", fetchArreglos)
+  const { data: arreglos, isLoading: arreglosLoading, mutate: mutateArreglos } = useSWR("arreglos-with-flores", fetchArreglosWithFlores)
+  const { data: flores, isLoading: floresLoading } = useSWR("flores-active", fetchFlores)
   const [showForm, setShowForm] = useState(false)
   const [editingPedido, setEditingPedido] = useState<Pedido | null>(null)
   const [filterEstado, setFilterEstado] = useState<EstadoPedido | "todos">("todos")
+
+  const handleArreglosChange = () => {
+    mutateArreglos()
+  }
 
   const handleCreate = async (data: {
     cliente: string
@@ -104,7 +129,7 @@ export function PedidosList() {
     setEditingPedido(pedido)
   }
 
-  const isLoading = pedidosLoading || arreglosLoading
+  const isLoading = pedidosLoading || arreglosLoading || floresLoading
 
   const filteredPedidos = pedidos?.filter(p => 
     filterEstado === "todos" || p.estado === filterEstado
@@ -193,7 +218,9 @@ export function PedidosList() {
         open={showForm}
         onOpenChange={setShowForm}
         arreglos={arreglos || []}
+        flores={flores || []}
         onSubmit={handleCreate}
+        onArreglosChange={handleArreglosChange}
       />
 
       <PedidoForm
@@ -201,7 +228,9 @@ export function PedidosList() {
         onOpenChange={(open) => !open && setEditingPedido(null)}
         pedido={editingPedido}
         arreglos={arreglos || []}
+        flores={flores || []}
         onSubmit={handleUpdate}
+        onArreglosChange={handleArreglosChange}
       />
     </div>
   )

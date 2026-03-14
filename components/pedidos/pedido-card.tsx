@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Trash2, Phone, MapPin, Calendar, Clock } from "lucide-react"
+import { Pencil, Trash2, Phone, MapPin, Calendar, Clock, MessageCircle, Send, Truck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,12 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import type { Pedido } from "@/lib/types"
 import { ESTADO_COLORS } from "@/lib/types"
 
@@ -29,6 +35,11 @@ function formatDate(dateStr: string) {
   return date.toLocaleDateString("es-HN", { day: "numeric", month: "short" })
 }
 
+function formatDateLong(dateStr: string) {
+  const date = new Date(dateStr + "T00:00:00")
+  return date.toLocaleDateString("es-HN", { day: "numeric", month: "long" })
+}
+
 function formatTime(timeStr: string | null) {
   if (!timeStr) return null
   const [hours, minutes] = timeStr.split(":")
@@ -36,6 +47,22 @@ function formatTime(timeStr: string | null) {
   const ampm = hour >= 12 ? "pm" : "am"
   const hour12 = hour % 12 || 12
   return `${hour12}:${minutes} ${ampm}`
+}
+
+function formatPhoneForWhatsApp(telefono: string): string {
+  // Remove all non-numeric characters
+  const cleaned = telefono.replace(/\D/g, "")
+  // If the number doesn't start with country code, assume Honduras (+504)
+  if (cleaned.length === 8) {
+    return `504${cleaned}`
+  }
+  return cleaned
+}
+
+function createWhatsAppLink(telefono: string, message: string): string {
+  const phone = formatPhoneForWhatsApp(telefono)
+  const encodedMessage = encodeURIComponent(message)
+  return `https://wa.me/${phone}?text=${encodedMessage}`
 }
 
 export function PedidoCard({ pedido, onEdit, onDelete }: PedidoCardProps) {
@@ -47,6 +74,28 @@ export function PedidoCard({ pedido, onEdit, onDelete }: PedidoCardProps) {
     await onDelete(pedido.id)
     setIsDeleting(false)
     setShowDeleteDialog(false)
+  }
+
+  // WhatsApp message generators
+  const handleChatCliente = () => {
+    if (!pedido.telefono) return
+    const url = createWhatsAppLink(pedido.telefono, "")
+    window.open(url, "_blank")
+  }
+
+  const handleEnviarCobro = () => {
+    if (!pedido.telefono) return
+    const message = `¡Hola ${pedido.cliente}! Recibimos tu pedido para el ${formatDateLong(pedido.fecha_entrega)}. El total es L${pedido.precio_total.toFixed(2)}. Tu abono es L${pedido.abono.toFixed(2)}, saldo pendiente: L${pedido.saldo.toFixed(2)}. ¡Gracias por tu preferencia!`
+    const url = createWhatsAppLink(pedido.telefono, message)
+    window.open(url, "_blank")
+  }
+
+  const handleAvisarEnRuta = () => {
+    if (!pedido.telefono) return
+    const direccionText = pedido.direccion ? ` hacia ${pedido.direccion}` : ""
+    const message = `¡Hola ${pedido.cliente}! Tu arreglo ya va en camino${direccionText}. 🛵💐`
+    const url = createWhatsAppLink(pedido.telefono, message)
+    window.open(url, "_blank")
   }
 
   return (
@@ -90,6 +139,13 @@ export function PedidoCard({ pedido, onEdit, onDelete }: PedidoCardProps) {
             )}
           </div>
 
+          {/* Card message preview */}
+          {pedido.mensaje_tarjeta && (
+            <div className="text-xs italic text-muted-foreground bg-muted/50 rounded p-2">
+              "{pedido.mensaje_tarjeta}"
+            </div>
+          )}
+
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="text-sm space-y-0.5">
               <div className="font-semibold text-foreground">L{pedido.precio_total.toFixed(2)}</div>
@@ -100,6 +156,31 @@ export function PedidoCard({ pedido, onEdit, onDelete }: PedidoCardProps) {
               )}
             </div>
             <div className="flex items-center gap-1">
+              {/* WhatsApp dropdown */}
+              {pedido.telefono && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50">
+                      <MessageCircle className="h-4 w-4" />
+                      <span className="sr-only">WhatsApp</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleChatCliente}>
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Chat Cliente
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleEnviarCobro}>
+                      <Send className="h-4 w-4 mr-2" />
+                      Enviar Cobro
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleAvisarEnRuta}>
+                      <Truck className="h-4 w-4 mr-2" />
+                      Avisar En Ruta
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               <Button 
                 variant="ghost" 
                 size="icon" 
