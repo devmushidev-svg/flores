@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,11 +21,22 @@ interface FlorFormProps {
 }
 
 export function FlorForm({ open, onOpenChange, flor, onSubmit }: FlorFormProps) {
-  const [nombre, setNombre] = useState(flor?.nombre || "")
-  const [precio, setPrecio] = useState(flor?.precio_actual?.toString() || "")
+  const [nombre, setNombre] = useState("")
+  const [precio, setPrecio] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isEditing = !!flor
+
+  // Sync state when flor prop changes or dialog opens
+  useEffect(() => {
+    if (open && flor) {
+      setNombre(flor.nombre)
+      setPrecio(flor.precio_actual.toString())
+    } else if (!open) {
+      setNombre("")
+      setPrecio("")
+    }
+  }, [open, flor])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,19 +48,10 @@ export function FlorForm({ open, onOpenChange, flor, onSubmit }: FlorFormProps) 
       precio_actual: parseFloat(precio)
     })
     setIsSubmitting(false)
-    setNombre("")
-    setPrecio("")
     onOpenChange(false)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      setNombre("")
-      setPrecio("")
-    } else if (flor) {
-      setNombre(flor.nombre)
-      setPrecio(flor.precio_actual.toString())
-    }
     onOpenChange(newOpen)
   }
 
