@@ -266,18 +266,24 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input
+                    <input
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      value={item.cantidad || ""}
-                      onChange={(e) => handleCantidadChange(index, e.target.value.replace(/\D/g, ""))}
-                      onBlur={() => {
-                        if (!item.cantidad || item.cantidad < 1) {
+                      defaultValue={item.cantidad > 0 ? item.cantidad.toString() : ""}
+                      key={`${index}-${item.flor_id}`}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "")
+                        handleCantidadChange(index, val)
+                      }}
+                      onBlur={(e) => {
+                        const val = e.target.value.trim()
+                        if (!val || parseInt(val) < 1) {
+                          e.target.value = "1"
                           handleCantidadChange(index, "1")
                         }
                       }}
-                      className="w-20 text-center"
+                      className="w-20 text-center h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
                       placeholder="1"
                     />
                     <Button
