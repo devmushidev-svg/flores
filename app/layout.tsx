@@ -11,18 +11,18 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#e11d73',
+  themeColor: '#ff1493',
 }
 
 export const metadata: Metadata = {
-  title: 'Floreria - Gestión de Pedidos',
-  description: 'Sistema de gestión para florería: flores, arreglos y pedidos',
+  title: 'Multiplanet Floristería',
+  description: 'Sistema de gestión para Multiplanet Floristería: flores, arreglos y pedidos',
   generator: 'v0.app',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Floreria',
+    title: 'Multiplanet',
   },
   formatDetection: {
     telephone: false,

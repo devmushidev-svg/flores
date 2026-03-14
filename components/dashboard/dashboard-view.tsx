@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import useSWR from "swr"
 import Link from "next/link"
-import { ShoppingBag, Clock, CheckCircle, DollarSign, Plus, ChevronRight, Wallet, MapPin, Phone, MessageCircle, Send, Truck } from "lucide-react"
+import { ShoppingBag, Clock, CheckCircle, DollarSign, Plus, ChevronRight, Wallet, MapPin, Phone, MessageCircle, Send, Truck, Flower2, BookOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -138,8 +138,9 @@ export function DashboardView() {
   return (
     <div className="space-y-6">
       <PageHeader 
-        title="Panel de Control" 
+        title="Multiplanet" 
         description="Vista general de tu florería"
+        showLogo
         action={
           <Button size="sm" asChild>
             <Link href="/pedidos">
@@ -314,13 +315,13 @@ export function DashboardView() {
           <div className="grid grid-cols-2 gap-3">
             <Button variant="outline" className="h-auto py-4" asChild>
               <Link href="/flores" className="flex flex-col items-center gap-2">
-                <span className="text-2xl">🌸</span>
+                <Flower2 className="h-6 w-6 text-primary" />
                 <span className="text-sm">Gestionar flores</span>
               </Link>
             </Button>
             <Button variant="outline" className="h-auto py-4" asChild>
               <Link href="/catalogo" className="flex flex-col items-center gap-2">
-                <span className="text-2xl">💐</span>
+                <BookOpen className="h-6 w-6 text-primary" />
                 <span className="text-sm">Ver catálogo</span>
               </Link>
             </Button>

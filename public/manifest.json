@@ -1,11 +1,11 @@
 {
-  "name": "Floreria - Gestión de Pedidos",
-  "short_name": "Floreria",
-  "description": "Sistema de gestión para florería: flores, arreglos y pedidos",
+  "name": "Multiplanet Floristería",
+  "short_name": "Multiplanet",
+  "description": "Sistema de gestión para Multiplanet Floristería: flores, arreglos y pedidos",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fdf2f4",
-  "theme_color": "#e11d73",
+  "theme_color": "#ff1493",
   "orientation": "portrait-primary",
   "icons": [
     {
