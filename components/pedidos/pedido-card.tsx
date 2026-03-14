@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import { 
@@ -625,6 +626,9 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
         <DialogContent className="max-w-[90vw] sm:max-w-md rounded-lg">
           <DialogHeader>
             <DialogTitle>Registrar Abono - N{pedido.numero_pedido}</DialogTitle>
+            <DialogDescription>
+              Ingresa el monto a abonar para este pedido.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
