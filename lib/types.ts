@@ -1,3 +1,12 @@
+export interface Cliente {
+  id: string
+  telefono: string
+  nombre: string
+  direccion: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Flor {
   id: string
   nombre: string

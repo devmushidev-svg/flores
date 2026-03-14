@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import Image from "next/image"
-import { ImageIcon, X } from "lucide-react"
+import useSWR from "swr"
+import { ImageIcon, X, User, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,7 +24,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { ArregloSelector } from "./arreglo-selector"
-import type { Flor, ArregloWithFlores, Pedido, EstadoPedido } from "@/lib/types"
+import { createClient } from "@/lib/supabase/client"
+import type { Flor, ArregloWithFlores, Pedido, EstadoPedido, Cliente } from "@/lib/types"
 import { ESTADOS_PEDIDO } from "@/lib/types"
 
 interface PedidoFormProps {
@@ -48,6 +50,16 @@ interface PedidoFormProps {
   onArreglosChange: () => void
 }
 
+const fetcher = async () => {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("clientes")
+    .select("*")
+    .order("updated_at", { ascending: false })
+  if (error) throw error
+  return data as Cliente[]
+}
+
 export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSubmit, onArreglosChange }: PedidoFormProps) {
   const [cliente, setCliente] = useState("")
   const [telefono, setTelefono] = useState("")
@@ -62,6 +74,16 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
   const [estado, setEstado] = useState<EstadoPedido>("Pendiente")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showArregloSelector, setShowArregloSelector] = useState(false)
+  
+  // Client autocomplete state
+  const [showClientSuggestions, setShowClientSuggestions] = useState(false)
+  const [clientSearchFocused, setClientSearchFocused] = useState<'telefono' | 'nombre' | null>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
+
+  const { data: clientes = [], mutate: mutateClientes } = useSWR(
+    open ? "clientes" : null,
+    fetcher
+  )
 
   const isEditing = !!pedido
 
@@ -86,7 +108,6 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       setDireccion(pedido.direccion || "")
       setFechaEntrega(pedido.fecha_entrega)
       setHoraEntrega(pedido.hora_entrega || "")
-      // Find the arreglo in the list
       const arreglo = arreglos.find(a => a.id === pedido.arreglo_id) || null
       setSelectedArreglo(arreglo)
       setDescripcion(pedido.descripcion || "")
@@ -99,6 +120,26 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     }
   }, [open, pedido, arreglos, resetForm])
 
+  // Filter clients based on input
+  const filteredClients = clientes.filter(c => {
+    if (clientSearchFocused === 'telefono' && telefono.length >= 2) {
+      return c.telefono.includes(telefono)
+    }
+    if (clientSearchFocused === 'nombre' && cliente.length >= 2) {
+      return c.nombre.toLowerCase().includes(cliente.toLowerCase())
+    }
+    return false
+  })
+
+  const handleSelectClient = (selectedClient: Cliente) => {
+    setCliente(selectedClient.nombre)
+    setTelefono(selectedClient.telefono)
+    if (selectedClient.direccion) {
+      setDireccion(selectedClient.direccion)
+    }
+    setShowClientSuggestions(false)
+  }
+
   // Handle arreglo selection
   const handleArregloSelect = (arreglo: ArregloWithFlores | null) => {
     setSelectedArreglo(arreglo)
@@ -109,6 +150,29 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
 
   const handleClearArreglo = () => {
     setSelectedArreglo(null)
+  }
+
+  // Auto-save client after order submission
+  const saveClient = async (nombre: string, tel: string, dir: string) => {
+    if (!tel || tel.length < 8) return
+    const supabase = createClient()
+    
+    // Upsert: insert or update based on telefono
+    const { error } = await supabase
+      .from("clientes")
+      .upsert(
+        { 
+          telefono: tel.trim(), 
+          nombre: nombre.trim(), 
+          direccion: dir.trim() || null,
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: 'telefono' }
+      )
+    
+    if (!error) {
+      mutateClientes()
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,6 +193,10 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       abono: parseFloat(abono) || 0,
       estado
     })
+    
+    // Auto-save client info
+    await saveClient(cliente, telefono, direccion)
+    
     setIsSubmitting(false)
     resetForm()
     onOpenChange(false)
@@ -144,38 +212,119 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
             <DialogTitle>{isEditing ? "Editar Pedido" : "Nuevo Pedido"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Customer Info */}
+            {/* Customer Info with Autocomplete */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2 col-span-2">
-                <Label htmlFor="cliente">Cliente *</Label>
-                <Input
-                  id="cliente"
-                  placeholder="Nombre del cliente"
-                  value={cliente}
-                  onChange={(e) => setCliente(e.target.value)}
-                  required
-                  autoComplete="off"
-                />
-              </div>
-              <div className="space-y-2">
+              {/* Phone input with autocomplete */}
+              <div className="space-y-2 relative">
                 <Label htmlFor="telefono">Teléfono</Label>
                 <Input
                   id="telefono"
                   type="tel"
                   placeholder="9999-9999"
                   value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
+                  onChange={(e) => {
+                    setTelefono(e.target.value)
+                    if (e.target.value.length >= 2) {
+                      setShowClientSuggestions(true)
+                      setClientSearchFocused('telefono')
+                    }
+                  }}
+                  onFocus={() => {
+                    if (telefono.length >= 2) {
+                      setShowClientSuggestions(true)
+                      setClientSearchFocused('telefono')
+                    }
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setShowClientSuggestions(false), 200)
+                  }}
+                  autoComplete="off"
                 />
+                {/* Suggestions dropdown for phone */}
+                {showClientSuggestions && clientSearchFocused === 'telefono' && filteredClients.length > 0 && (
+                  <div 
+                    ref={suggestionsRef}
+                    className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border rounded-md shadow-lg max-h-40 overflow-y-auto"
+                  >
+                    {filteredClients.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2 text-sm"
+                        onClick={() => handleSelectClient(c)}
+                      >
+                        <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">{c.nombre}</div>
+                          <div className="text-xs text-muted-foreground">{c.telefono}</div>
+                        </div>
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="direccion">Dirección</Label>
+
+              {/* Client name input with autocomplete */}
+              <div className="space-y-2 relative">
+                <Label htmlFor="cliente">Cliente *</Label>
                 <Input
-                  id="direccion"
-                  placeholder="Dirección de entrega"
-                  value={direccion}
-                  onChange={(e) => setDireccion(e.target.value)}
+                  id="cliente"
+                  placeholder="Nombre"
+                  value={cliente}
+                  onChange={(e) => {
+                    setCliente(e.target.value)
+                    if (e.target.value.length >= 2) {
+                      setShowClientSuggestions(true)
+                      setClientSearchFocused('nombre')
+                    }
+                  }}
+                  onFocus={() => {
+                    if (cliente.length >= 2) {
+                      setShowClientSuggestions(true)
+                      setClientSearchFocused('nombre')
+                    }
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setShowClientSuggestions(false), 200)
+                  }}
+                  required
+                  autoComplete="off"
                 />
+                {/* Suggestions dropdown for name */}
+                {showClientSuggestions && clientSearchFocused === 'nombre' && filteredClients.length > 0 && (
+                  <div 
+                    className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border rounded-md shadow-lg max-h-40 overflow-y-auto"
+                  >
+                    {filteredClients.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2 text-sm"
+                        onClick={() => handleSelectClient(c)}
+                      >
+                        <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">{c.nombre}</div>
+                          <div className="text-xs text-muted-foreground">{c.telefono}</div>
+                        </div>
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+            </div>
+
+            {/* Address */}
+            <div className="space-y-2">
+              <Label htmlFor="direccion">Dirección de entrega</Label>
+              <Input
+                id="direccion"
+                placeholder="Dirección de entrega"
+                value={direccion}
+                onChange={(e) => setDireccion(e.target.value)}
+              />
             </div>
 
             {/* Delivery Date & Time */}
@@ -207,7 +356,6 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
               {selectedArreglo ? (
                 <Card className="border-primary/50">
                   <CardContent className="p-3 flex gap-3 items-center">
-                    {/* Image */}
                     <div className="w-14 h-14 rounded-lg bg-muted relative overflow-hidden flex-shrink-0">
                       {selectedArreglo.foto_url ? (
                         <Image
@@ -222,16 +370,12 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
                         </div>
                       )}
                     </div>
-
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-sm truncate">{selectedArreglo.nombre}</h4>
                       <p className="text-sm text-primary font-semibold">
                         L{selectedArreglo.precio_real.toFixed(2)}
                       </p>
                     </div>
-
-                    {/* Actions */}
                     <div className="flex gap-1 flex-shrink-0">
                       <Button
                         type="button"
@@ -375,7 +519,6 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
         </DialogContent>
       </Dialog>
 
-      {/* Arreglo Selector Popup */}
       <ArregloSelector
         open={showArregloSelector}
         onOpenChange={setShowArregloSelector}

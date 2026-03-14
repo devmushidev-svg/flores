@@ -2,13 +2,14 @@
 
 import { useState } from "react"
 import useSWR from "swr"
-import { Plus, Filter } from "lucide-react"
+import { Plus, Filter, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/page-header"
 import { PedidoCard } from "./pedido-card"
 import { PedidoForm } from "./pedido-form"
+import { QuickOrderForm } from "./quick-order-form"
 import { createClient } from "@/lib/supabase/client"
 import type { Flor, ArregloWithFlores, Pedido, EstadoPedido } from "@/lib/types"
 import { ESTADOS_PEDIDO, ESTADO_COLORS } from "@/lib/types"
@@ -65,6 +66,7 @@ export function PedidosList() {
   const { data: arreglos, isLoading: arreglosLoading, mutate: mutateArreglos } = useSWR("arreglos-with-flores", fetchArreglosWithFlores)
   const { data: flores, isLoading: floresLoading } = useSWR("flores-active", fetchFlores)
   const [showForm, setShowForm] = useState(false)
+  const [showQuickForm, setShowQuickForm] = useState(false)
   const [editingPedido, setEditingPedido] = useState<Pedido | null>(null)
   const [filterEstado, setFilterEstado] = useState<EstadoPedido | "todos">("todos")
 
@@ -162,10 +164,16 @@ export function PedidosList() {
         title="Pedidos" 
         description="Gestiona tus pedidos"
         action={
-          <Button size="sm" onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Nuevo
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100" onClick={() => setShowQuickForm(true)}>
+              <Zap className="h-4 w-4 mr-1" />
+              Rápido
+            </Button>
+            <Button size="sm" onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Nuevo
+            </Button>
+          </div>
         }
       />
 
@@ -242,6 +250,13 @@ export function PedidosList() {
         flores={flores || []}
         onSubmit={handleUpdate}
         onArreglosChange={handleArreglosChange}
+      />
+
+      <QuickOrderForm
+        open={showQuickForm}
+        onOpenChange={setShowQuickForm}
+        arreglos={arreglos || []}
+        onSubmit={handleCreate}
       />
     </div>
   )
