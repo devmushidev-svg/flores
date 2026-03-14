@@ -68,32 +68,42 @@ async function compressImage(file: File): Promise<Blob> {
  * Uploads an image to Cloudinary with compression
  */
 export async function uploadToCloudinary(file: File): Promise<UploadResult> {
+  console.log("[v0] Cloudinary upload starting...")
+  console.log("[v0] CLOUD_NAME:", CLOUD_NAME ? "Set" : "Not set")
+  console.log("[v0] UPLOAD_PRESET:", UPLOAD_PRESET ? "Set" : "Not set")
+  
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
-    throw new Error("Cloudinary configuration missing. Please add NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET.")
+    throw new Error("Cloudinary configuration missing. Please add NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in your environment variables (Settings > Vars).")
   }
 
   // Compress the image before upload
+  console.log("[v0] Compressing image...")
   const compressedBlob = await compressImage(file)
+  console.log("[v0] Compression done, blob size:", compressedBlob.size)
   
   const formData = new FormData()
   formData.append("file", compressedBlob, file.name.replace(/\.[^.]+$/, ".jpg"))
   formData.append("upload_preset", UPLOAD_PRESET)
   formData.append("folder", "floreria/arreglos")
   
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-    {
-      method: "POST",
-      body: formData,
-    }
-  )
+  const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`
+  console.log("[v0] Uploading to:", uploadUrl)
+  
+  const response = await fetch(uploadUrl, {
+    method: "POST",
+    body: formData,
+  })
 
+  console.log("[v0] Response status:", response.status)
+  
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error?.message || "Upload failed")
+    console.log("[v0] Cloudinary error:", error)
+    throw new Error(error.error?.message || `Upload failed: ${response.status}`)
   }
 
   const data = await response.json()
+  console.log("[v0] Upload successful:", data.secure_url)
   
   return {
     url: data.secure_url,
