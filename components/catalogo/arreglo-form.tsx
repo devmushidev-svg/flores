@@ -103,9 +103,11 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
     setFloresSeleccionadas(updated)
   }
 
-  const handleCantidadChange = (index: number, cantidad: number) => {
+  const handleCantidadChange = (index: number, value: string) => {
     const updated = [...floresSeleccionadas]
-    updated[index] = { ...updated[index], cantidad: Math.max(1, cantidad) }
+    // Allow empty string for easier mobile editing, but ensure min of 1 when saving
+    const cantidad = value === "" ? 0 : parseInt(value) || 0
+    updated[index] = { ...updated[index], cantidad }
     setFloresSeleccionadas(updated)
   }
 
@@ -135,7 +137,9 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
       descripcion: descripcion.trim(),
       foto_url: fotoUrl,
       precio_real: parseFloat(precioReal),
-      flores: floresSeleccionadas.filter(f => f.flor_id)
+      flores: floresSeleccionadas
+        .filter(f => f.flor_id)
+        .map(f => ({ ...f, cantidad: Math.max(1, f.cantidad || 1) }))
     })
     setIsSubmitting(false)
     resetForm()
@@ -263,11 +267,18 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
                       </SelectContent>
                     </Select>
                     <Input
-                      type="number"
-                      min="1"
-                      value={item.cantidad}
-                      onChange={(e) => handleCantidadChange(index, parseInt(e.target.value) || 1)}
-                      className="w-20"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={item.cantidad || ""}
+                      onChange={(e) => handleCantidadChange(index, e.target.value.replace(/\D/g, ""))}
+                      onBlur={() => {
+                        if (!item.cantidad || item.cantidad < 1) {
+                          handleCantidadChange(index, "1")
+                        }
+                      }}
+                      className="w-20 text-center"
+                      placeholder="1"
                     />
                     <Button
                       type="button"

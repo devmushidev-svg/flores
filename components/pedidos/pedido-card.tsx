@@ -94,7 +94,14 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange }: PedidoC
 
   const handleEnviarCobro = () => {
     if (!pedido.telefono) return
-    const message = `¡Hola ${pedido.cliente}! Recibimos tu pedido para el ${formatDateLong(pedido.fecha_entrega)}. El total es L${pedido.precio_total.toFixed(2)}. Tu abono es L${pedido.abono.toFixed(2)}, saldo pendiente: L${pedido.saldo.toFixed(2)}. ¡Gracias por tu preferencia!`
+    const fechaEntrega = formatDateLong(pedido.fecha_entrega)
+    const horaEntrega = pedido.hora_entrega ? ` a las ${formatTime(pedido.hora_entrega)}` : ""
+    const arregloNombre = pedido.arreglos?.nombre ? `\n\nArreglo: ${pedido.arreglos.nombre}` : ""
+    const descripcionText = pedido.descripcion ? `\nDescripción: ${pedido.descripcion}` : ""
+    const mensajeTarjeta = pedido.mensaje_tarjeta ? `\nMensaje de tarjeta: "${pedido.mensaje_tarjeta}"` : ""
+    const direccionText = pedido.direccion ? `\nDirección de entrega: ${pedido.direccion}` : ""
+    
+    const message = `¡Hola ${pedido.cliente}! Recibimos tu pedido para el ${fechaEntrega}${horaEntrega}.${arregloNombre}${descripcionText}${mensajeTarjeta}${direccionText}\n\nTotal: L${pedido.precio_total.toFixed(2)}\nAbono: L${pedido.abono.toFixed(2)}\nSaldo pendiente: L${pedido.saldo.toFixed(2)}\n\n¡Gracias por tu preferencia!`
     const url = createWhatsAppLink(pedido.telefono, message)
     window.open(url, "_blank")
   }
@@ -102,7 +109,8 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange }: PedidoC
   const handleAvisarEnRuta = () => {
     if (!pedido.telefono) return
     const direccionText = pedido.direccion ? ` hacia ${pedido.direccion}` : ""
-    const message = `¡Hola ${pedido.cliente}! Tu arreglo ya va en camino${direccionText}. 🛵💐`
+    const arregloNombre = pedido.arreglos?.nombre ? ` (${pedido.arreglos.nombre})` : ""
+    const message = `¡Hola ${pedido.cliente}! Tu arreglo${arregloNombre} ya va en camino${direccionText}. 🛵💐`
     const url = createWhatsAppLink(pedido.telefono, message)
     window.open(url, "_blank")
   }
