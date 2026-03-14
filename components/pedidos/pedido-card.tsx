@@ -159,35 +159,45 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
           @page { margin: 0; size: 80mm auto; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
             width: 80mm;
-            padding: 8px;
-            line-height: 1.4;
+            padding: 6px;
+            line-height: 1.3;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
-          .header { text-align: center; margin-bottom: 12px; border-bottom: 2px dashed #000; padding-bottom: 10px; }
-          .logo { width: 60px; height: 60px; margin: 0 auto 8px; }
+          .header { text-align: center; margin-bottom: 8px; border-bottom: 3px solid #000; padding-bottom: 8px; }
+          .logo { width: 50px; height: 50px; margin: 0 auto 6px; }
           .logo img { width: 100%; height: 100%; object-fit: contain; }
-          .business-name { font-size: 16px; font-weight: bold; text-transform: uppercase; }
-          .business-info { font-size: 10px; margin-top: 4px; }
-          .order-number { font-size: 20px; font-weight: bold; margin: 12px 0; text-align: center; background: #000; color: #fff; padding: 8px; }
-          .section { margin: 10px 0; padding: 8px 0; border-bottom: 1px dashed #ccc; }
-          .section-title { font-weight: bold; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; }
-          .row { display: flex; justify-content: space-between; margin: 4px 0; }
-          .label { font-weight: bold; }
-          .value { text-align: right; max-width: 60%; }
-          .full-row { margin: 4px 0; }
-          .full-row .label { display: block; margin-bottom: 2px; }
-          .full-row .value { text-align: left; max-width: 100%; padding-left: 8px; }
-          .totals { background: #f5f5f5; padding: 10px; margin: 10px 0; }
-          .totals .row { font-size: 13px; }
-          .totals .total-row { font-size: 16px; font-weight: bold; border-top: 1px solid #000; padding-top: 6px; margin-top: 6px; }
-          .footer { text-align: center; margin-top: 12px; font-size: 10px; border-top: 2px dashed #000; padding-top: 10px; }
-          .thank-you { font-weight: bold; font-size: 12px; margin-bottom: 4px; }
-          .arreglo-img { text-align: center; margin: 10px 0; }
-          .arreglo-img img { max-width: 100%; max-height: 120px; object-fit: contain; border: 1px solid #ddd; border-radius: 4px; }
-          .nota-box { background: #fff8e1; border: 1px solid #ffcc80; padding: 6px; margin: 6px 0; font-size: 11px; }
-          .tarjeta-box { background: #f5f5f5; border-left: 3px solid #666; padding: 6px; margin: 6px 0; font-style: italic; font-size: 11px; }
+          .business-name { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+          .business-info { font-size: 11px; font-weight: 600; margin-top: 4px; line-height: 1.4; }
+          .order-number { font-size: 28px; font-weight: 900; margin: 8px 0; text-align: center; background: #000; color: #fff; padding: 6px 4px; letter-spacing: 2px; }
+          .section { margin: 6px 0; padding: 6px 0; border-bottom: 1px dashed #000; }
+          .section-title { font-weight: 900; font-size: 13px; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid #000; padding-bottom: 2px; }
+          .row { display: flex; justify-content: space-between; margin: 3px 0; font-size: 13px; }
+          .label { font-weight: 700; }
+          .value { font-weight: 600; text-align: right; max-width: 55%; word-break: break-word; }
+          .value-bold { font-weight: 900; font-size: 14px; }
+          .full-row { margin: 3px 0; }
+          .full-row .label { display: block; margin-bottom: 1px; font-weight: 700; }
+          .full-row .value { text-align: left; max-width: 100%; padding-left: 6px; font-weight: 600; }
+          .totals { border: 2px solid #000; padding: 6px; margin: 8px 0; }
+          .totals .section-title { border-bottom: none; margin-bottom: 2px; }
+          .totals .row { font-size: 14px; font-weight: 700; margin: 2px 0; }
+          .totals .total-row { font-size: 20px; font-weight: 900; border-top: 2px solid #000; padding-top: 4px; margin-top: 4px; }
+          .totals .total-row .value { font-size: 22px; }
+          .footer { text-align: center; margin-top: 8px; font-size: 11px; border-top: 3px solid #000; padding-top: 8px; }
+          .thank-you { font-weight: 900; font-size: 14px; margin-bottom: 2px; text-transform: uppercase; }
+          .arreglo-name { font-size: 15px; font-weight: 900; text-align: center; margin: 4px 0; text-transform: uppercase; }
+          .arreglo-img { text-align: center; margin: 6px 0; }
+          .arreglo-img img { max-width: 90%; max-height: 100px; object-fit: contain; border: 2px solid #000; }
+          .nota-box { border: 2px solid #000; padding: 4px 6px; margin: 4px 0; font-size: 12px; font-weight: 700; }
+          .nota-box strong { font-weight: 900; text-transform: uppercase; }
+          .tarjeta-box { border: 2px dashed #000; padding: 4px 6px; margin: 4px 0; font-style: italic; font-size: 12px; font-weight: 600; }
+          .tarjeta-box strong { font-weight: 900; font-style: normal; }
+          .status-badge { display: inline-block; background: #000; color: #fff; padding: 2px 8px; font-size: 12px; font-weight: 900; text-transform: uppercase; margin-top: 4px; }
           @media print {
             body { width: 100%; }
           }
@@ -229,19 +239,20 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
         </div>
 
         <div class="section">
-          <div class="section-title">Detalles del Pedido</div>
+          <div class="section-title">Entrega</div>
           <div class="row">
-            <span class="label">Fecha entrega:</span>
-            <span class="value">${fechaEntrega}</span>
+            <span class="label">Fecha:</span>
+            <span class="value value-bold">${fechaEntrega}</span>
           </div>
           <div class="row">
             <span class="label">Hora:</span>
-            <span class="value">${horaEntrega}</span>
+            <span class="value value-bold">${horaEntrega}</span>
           </div>
-          <div class="row">
-            <span class="label">Arreglo:</span>
-            <span class="value">${arregloNombre}</span>
-          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Arreglo</div>
+          <div class="arreglo-name">${arregloNombre}</div>
           ${arregloFoto ? `
           <div class="arreglo-img">
             <img src="${arregloFoto}" alt="${arregloNombre}" onerror="this.style.display='none'" />
@@ -249,24 +260,24 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
           ` : ""}
           ${pedido.descripcion ? `
           <div class="nota-box">
-            <strong>Nota:</strong> ${pedido.descripcion}
+            <strong>NOTA:</strong> ${pedido.descripcion}
           </div>
           ` : ""}
           ${pedido.mensaje_tarjeta ? `
           <div class="tarjeta-box">
-            <strong>Mensaje tarjeta:</strong><br>"${pedido.mensaje_tarjeta}"
+            <strong>TARJETA:</strong> "${pedido.mensaje_tarjeta}"
           </div>
           ` : ""}
         </div>
 
         <div class="totals">
-          <div class="section-title">Resumen de Pago</div>
+          <div class="section-title">Pago</div>
           <div class="row">
             <span class="label">Total:</span>
             <span class="value">L${pedido.precio_total.toFixed(2)}</span>
           </div>
           <div class="row">
-            <span class="label">Abono:</span>
+            <span class="label">Abonado:</span>
             <span class="value">L${pedido.abono.toFixed(2)}</span>
           </div>
           <div class="row total-row">
@@ -275,11 +286,8 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
           </div>
         </div>
 
-        <div class="section">
-          <div class="row">
-            <span class="label">Estado:</span>
-            <span class="value">${pedido.estado}</span>
-          </div>
+        <div style="text-align:center; margin: 6px 0;">
+          <span class="status-badge">${pedido.estado}</span>
         </div>
 
         <div class="footer">
