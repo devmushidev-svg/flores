@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
-import { createClient } from "@/lib/supabase/client"
+import { uploadToCloudinary } from "@/lib/cloudinary"
 import type { Flor, ArregloWithFlores, ArregloFlor } from "@/lib/types"
 
 interface FlorItem {
@@ -115,24 +115,11 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
 
     setIsUploading(true)
     try {
-      const supabase = createClient()
-      const fileExt = file.name.split(".").pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-      const filePath = `arreglos/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from("images")
-        .upload(filePath, file)
-
-      if (uploadError) throw uploadError
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("images")
-        .getPublicUrl(filePath)
-
-      setFotoUrl(publicUrl)
+      const result = await uploadToCloudinary(file)
+      setFotoUrl(result.url)
     } catch (error) {
       console.error("Error uploading image:", error)
+      alert("Error al subir la imagen. Verifica tu configuracion de Cloudinary.")
     } finally {
       setIsUploading(false)
     }
