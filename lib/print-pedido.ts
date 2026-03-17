@@ -6,7 +6,7 @@ import type { Pedido } from "./types"
 
 function formatDateLong(dateStr: string) {
   const d = new Date(dateStr + "T00:00:00")
-  return d.toLocaleDateString("es-HN", { day: "numeric", month: "long" })
+  return d.toLocaleDateString("es-HN", { day: "numeric", month: "long", year: "numeric" })
 }
 
 function formatTime(timeStr: string | null) {
@@ -112,7 +112,7 @@ export function printPedidoTermica(pedido: Pedido) {
       <div class="row"><span class="label">Saldo:</span><span class="value">L${pedido.saldo.toFixed(2)}</span></div>
       <div class="row total-row"><span class="label">GRAN TOTAL:</span><span class="value">L${pedido.precio_total.toFixed(2)}</span></div>
     </div>
-    <div class="footer">Gracias por su preferencia!<br>Multiplanet Floristeria</div>
+    <div class="footer">Gracias por su preferencia!<br>Multiplanet Floristeria<br><small>Impreso: ${new Date().toLocaleString("es-HN", { dateStyle: "short", timeStyle: "short" })}</small></div>
     </body></html>`)
   doc.close()
   doPrint(iframe)
@@ -200,7 +200,7 @@ export function printPedidoCarta(pedido: Pedido) {
         </div>
       </div>
     </div>
-    <div class="footer">Gracias por su preferencia · Multiplanet Floristería</div>
+    <div class="footer">Gracias por su preferencia · Multiplanet Floristería<br><small>Impreso: ${new Date().toLocaleString("es-HN", { dateStyle: "short", timeStyle: "short" })}</small></div>
     </body></html>`)
   doc.close()
   doPrint(iframe)
