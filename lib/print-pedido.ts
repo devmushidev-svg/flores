@@ -88,13 +88,13 @@ export function printPedidoTermica(pedido: Pedido) {
       <div class="section-title">Cliente</div>
       <div class="row"><span class="label">Cliente:</span><span class="value">${pedido.cliente}</span></div>
       ${pedido.telefono ? `<div class="row"><span class="label">Telefono:</span><span class="value">${pedido.telefono}</span></div>` : ""}
-      ${pedido.direccion ? `<div class="full-row"><span class="label">Dir. cliente:</span><span class="value" style="font-size:11px;">${pedido.direccion}</span></div>` : ""}
+      ${pedido.direccion ? `<div class="row"><span class="label">Direccion:</span><span class="value">${pedido.direccion}</span></div>` : ""}
     </div>
     <div class="section">
       <div class="section-title">Entrega</div>
       <div class="row"><span class="label">Fecha:</span><span class="value">${fechaEntrega}</span></div>
       <div class="row"><span class="label">Hora:</span><span class="value">${horaEntrega}</span></div>
-      ${(pedido.domicilio || pedido.direccion) ? `<div class="full-row"><span class="label">DOMICILIO ENTREGA:</span><span class="value" style="font-size:16px;font-weight:900;">${pedido.domicilio || pedido.direccion}</span></div>` : ""}
+      ${(pedido.domicilio || pedido.direccion) ? `<div class="full-row"><span class="label">DOMICILIO:</span><span class="value" style="font-size:16px;font-weight:900;">${pedido.domicilio || pedido.direccion}</span></div>` : ""}
     </div>
     <div class="section">
       <div class="section-title">Arreglo</div>
@@ -176,13 +176,13 @@ export function printPedidoCarta(pedido: Pedido) {
           <div class="section-title">Cliente</div>
           <div class="row"><span class="label">Nombre:</span><span>${pedido.cliente}</span></div>
           ${pedido.telefono ? `<div class="row"><span class="label">Teléfono:</span><span>${pedido.telefono}</span></div>` : ""}
-          ${pedido.direccion ? `<div class="row" style="margin-top:4px;"><span class="label" style="font-size:11px;">Dir. cliente:</span><span style="font-size:11px;">${pedido.direccion}</span></div>` : ""}
+          ${pedido.direccion ? `<div class="row"><span class="label">Dirección:</span><span>${pedido.direccion}</span></div>` : ""}
         </div>
         <div class="section">
           <div class="section-title">Entrega</div>
           <div class="row"><span class="label">Fecha:</span><span>${fechaEntrega}</span></div>
           <div class="row"><span class="label">Hora:</span><span>${horaEntrega}</span></div>
-          ${(pedido.domicilio || pedido.direccion) ? `<div class="row" style="margin-top:8px;"><span class="label" style="font-size:12px;">DOMICILIO ENTREGA:</span></div><div style="font-size:18px;font-weight:900;margin:4px 0;padding:6px;border:2px solid #000;background:#f5f5f5;">${pedido.domicilio || pedido.direccion}</div>` : ""}
+          ${(pedido.domicilio || pedido.direccion) ? `<div style="margin-top:8px;"><div class="row"><span class="label">DOMICILIO:</span></div><div style="font-size:18px;font-weight:900;padding:8px;border:2px solid #000;background:#f5f5f5;">${pedido.domicilio || pedido.direccion}</div></div>` : ""}
         </div>
         <div class="section">
           <div class="section-title">Arreglo</div>
