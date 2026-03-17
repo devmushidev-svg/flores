@@ -378,10 +378,10 @@ export function CalendarioView() {
                               <span>{pedido.telefono}</span>
                             </a>
                           )}
-                          {pedido.direccion && (
+                          {(pedido.domicilio || pedido.direccion) && (
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                              <span className="truncate">{pedido.direccion}</span>
+                              <span className="truncate font-medium">{pedido.domicilio || pedido.direccion}</span>
                             </div>
                           )}
                         </div>

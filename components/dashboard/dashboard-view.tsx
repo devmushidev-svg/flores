@@ -149,7 +149,7 @@ export function DashboardView() {
 
   const handleAvisarEnRuta = (pedido: Pedido) => {
     if (!pedido.telefono) return
-    const direccionText = pedido.direccion ? ` hacia ${pedido.direccion}` : ""
+    const direccionText = (pedido.domicilio || pedido.direccion) ? ` hacia ${pedido.domicilio || pedido.direccion}` : ""
     const message = `¡Hola ${pedido.cliente}! Tu arreglo ya va en camino${direccionText}. 🛵💐`
     const url = createWhatsAppLink(pedido.telefono, message)
     window.open(url, "_blank")
@@ -291,10 +291,10 @@ export function DashboardView() {
                       {/* Extra info row */}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <div className="flex items-center gap-3">
-                          {pedido.direccion && (
+                          {(pedido.domicilio || pedido.direccion) && (
                             <span className="flex items-center gap-1 truncate max-w-[150px]">
                               <MapPin className="h-3 w-3" />
-                              {pedido.direccion}
+                              {pedido.domicilio || pedido.direccion}
                             </span>
                           )}
                           {pedido.telefono && (

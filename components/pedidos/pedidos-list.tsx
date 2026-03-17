@@ -87,6 +87,7 @@ export function PedidosList() {
     cliente: string
     telefono: string
     direccion: string
+    domicilio: string
     fecha_entrega: string
     hora_entrega: string
     arreglo_id: string | null
@@ -115,6 +116,7 @@ export function PedidosList() {
     cliente: string
     telefono: string
     direccion: string
+    domicilio: string
     fecha_entrega: string
     hora_entrega: string
     arreglo_id: string | null

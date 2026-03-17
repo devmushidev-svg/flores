@@ -38,6 +38,7 @@ interface PedidoFormProps {
     cliente: string
     telefono: string
     direccion: string
+    domicilio: string
     fecha_entrega: string
     hora_entrega: string
     arreglo_id: string | null
@@ -67,6 +68,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
   const [cliente, setCliente] = useState("")
   const [telefono, setTelefono] = useState("")
   const [direccion, setDireccion] = useState("")
+  const [domicilio, setDomicilio] = useState("")
   const [fechaEntrega, setFechaEntrega] = useState("")
   const [horaEntrega, setHoraEntrega] = useState("")
   const [selectedArreglo, setSelectedArreglo] = useState<ArregloWithFlores | null>(null)
@@ -97,6 +99,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     setCliente("")
     setTelefono("")
     setDireccion("")
+    setDomicilio("")
     setFechaEntrega(new Date().toISOString().split("T")[0])
     setHoraEntrega("")
     setSelectedArreglo(null)
@@ -115,6 +118,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       setCliente(pedido.cliente)
       setTelefono(pedido.telefono || "")
       setDireccion(pedido.direccion || "")
+      setDomicilio(pedido.domicilio || pedido.direccion || "")
       setFechaEntrega(pedido.fecha_entrega)
       setHoraEntrega(pedido.hora_entrega || "")
       const arreglo = arreglos.find(a => a.id === pedido.arreglo_id) || null
@@ -148,6 +152,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     setTelefono(selectedClient.telefono)
     if (selectedClient.direccion) {
       setDireccion(selectedClient.direccion)
+      setDomicilio(selectedClient.direccion)
     }
     setShowClientSuggestions(false)
   }
@@ -203,6 +208,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       cliente: cliente.trim(),
       telefono: telefono.trim(),
       direccion: direccion.trim(),
+      domicilio: domicilio.trim() || direccion.trim(),
       fecha_entrega: fechaEntrega,
       hora_entrega: horaEntrega,
       arreglo_id: selectedArreglo?.id || null,
@@ -359,15 +365,27 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
               </div>
             </div>
 
-            {/* Address */}
-            <div className="space-y-2">
-              <Label htmlFor="direccion">Dirección de entrega</Label>
-              <Input
-                id="direccion"
-                placeholder="Dirección de entrega"
-                value={direccion}
-                onChange={(e) => setDireccion(e.target.value)}
-              />
+            {/* Addresses */}
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="direccion">Dirección del cliente</Label>
+                <Input
+                  id="direccion"
+                  placeholder="Dirección del cliente"
+                  value={direccion}
+                  onChange={(e) => setDireccion(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="domicilio" className="font-semibold">Domicilio de entrega</Label>
+                <Input
+                  id="domicilio"
+                  placeholder="Donde se va a entregar"
+                  value={domicilio}
+                  onChange={(e) => setDomicilio(e.target.value)}
+                  className="font-medium"
+                />
+              </div>
             </div>
 
             {/* Delivery Date & Time */}

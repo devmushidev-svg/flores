@@ -74,7 +74,7 @@ export function ListaEntregasDia() {
               <th>Hora</th>
               <th>Cliente</th>
               <th>Teléfono</th>
-              <th>Dirección</th>
+              <th>Domicilio</th>
               <th>Arreglo</th>
               <th>Total</th>
               <th>Estado</th>
@@ -86,7 +86,7 @@ export function ListaEntregasDia() {
                 <td>${formatTime(p.hora_entrega)}</td>
                 <td>${p.cliente}</td>
                 <td>${p.telefono || "-"}</td>
-                <td>${p.direccion || "-"}</td>
+                <td>${p.domicilio || p.direccion || "-"}</td>
                 <td>${p.arreglos?.nombre || "-"}${p.arreglos?.codigo?.trim() ? ` <strong>(${p.arreglos.codigo.trim()})</strong>` : ""}</td>
                 <td>L${p.precio_total.toFixed(2)}</td>
                 <td><span class="estado">${p.estado}</span></td>
@@ -105,7 +105,7 @@ export function ListaEntregasDia() {
   }
 
   const handleExportExcel = () => {
-    const headers = ["Hora", "Cliente", "Teléfono", "Dirección", "Arreglo", "Total", "Estado"]
+    const headers = ["Hora", "Cliente", "Teléfono", "Domicilio", "Arreglo", "Total", "Estado"]
     const rows = pedidos.map((p) => [
       formatTime(p.hora_entrega),
       p.cliente,
@@ -170,7 +170,7 @@ export function ListaEntregasDia() {
                 <th className="text-left p-2 font-medium">Hora</th>
                 <th className="text-left p-2 font-medium">Cliente</th>
                 <th className="text-left p-2 font-medium">Teléfono</th>
-                <th className="text-left p-2 font-medium">Dirección</th>
+                <th className="text-left p-2 font-medium">Domicilio</th>
                 <th className="text-left p-2 font-medium">Arreglo</th>
                 <th className="text-right p-2 font-medium">Total</th>
                 <th className="text-left p-2 font-medium">Estado</th>
@@ -182,7 +182,7 @@ export function ListaEntregasDia() {
                   <td className="p-2">{formatTime(p.hora_entrega)}</td>
                   <td className="p-2 font-medium">{p.cliente}</td>
                   <td className="p-2">{p.telefono || "-"}</td>
-                  <td className="p-2 max-w-[120px] truncate" title={p.direccion || ""}>{p.direccion || "-"}</td>
+                  <td className="p-2 max-w-[120px] truncate font-medium" title={p.domicilio || p.direccion || ""}>{p.domicilio || p.direccion || "-"}</td>
                   <td className="p-2">{p.arreglos?.nombre || "-"}{p.arreglos?.codigo?.trim() ? <><br /><span className="font-bold text-xs">{p.arreglos.codigo.trim()}</span></> : null}</td>
                   <td className="p-2 text-right">L{p.precio_total.toFixed(2)}</td>
                   <td className="p-2">

@@ -26,6 +26,7 @@ interface QuickOrderFormProps {
     cliente: string
     telefono: string
     direccion: string
+    domicilio: string
     fecha_entrega: string
     hora_entrega: string
     arreglo_id: string | null
@@ -55,6 +56,7 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
   const [telefono, setTelefono] = useState("")
   const [cliente, setCliente] = useState("")
   const [direccion, setDireccion] = useState("")
+  const [domicilio, setDomicilio] = useState("")
   const [fechaEntrega, setFechaEntrega] = useState(new Date().toISOString().split("T")[0])
   const [horaEntrega, setHoraEntrega] = useState("")
   const [selectedArreglo, setSelectedArreglo] = useState<ArregloWithFlores | null>(null)
@@ -78,6 +80,7 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
       setTelefono("")
       setCliente("")
       setDireccion("")
+      setDomicilio("")
       setFechaEntrega(new Date().toISOString().split("T")[0])
       setHoraEntrega("")
       setSelectedArreglo(null)
@@ -104,6 +107,7 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
     setTelefono(selectedClient.telefono)
     if (selectedClient.direccion) {
       setDireccion(selectedClient.direccion)
+      setDomicilio(selectedClient.direccion)
     }
     setShowClientSuggestions(false)
     // Auto advance to step 2
@@ -144,6 +148,7 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
       cliente: cliente.trim(),
       telefono: telefono.trim(),
       direccion: direccion.trim(),
+      domicilio: domicilio.trim() || direccion.trim(),
       fecha_entrega: fechaEntrega,
       hora_entrega: horaEntrega,
       arreglo_id: selectedArreglo.id,
@@ -251,11 +256,20 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
             </div>
 
             <div className="space-y-2">
-              <Label>Dirección (opcional)</Label>
+              <Label>Dirección del cliente (opcional)</Label>
               <Input
-                placeholder="Dirección de entrega"
+                placeholder="Dirección del cliente"
                 value={direccion}
                 onChange={(e) => setDireccion(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-semibold">Domicilio de entrega</Label>
+              <Input
+                placeholder="Donde se va a entregar"
+                value={domicilio}
+                onChange={(e) => setDomicilio(e.target.value)}
+                className="font-medium"
               />
             </div>
 

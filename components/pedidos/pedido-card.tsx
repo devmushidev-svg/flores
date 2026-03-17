@@ -153,7 +153,7 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
     const arregloNombre = pedido.arreglos?.nombre ? `\n\nArreglo: ${pedido.arreglos.nombre}` : ""
     const descripcionText = pedido.descripcion ? `\nNota: ${pedido.descripcion}` : ""
     const mensajeTarjeta = pedido.mensaje_tarjeta ? `\nMensaje de tarjeta: "${pedido.mensaje_tarjeta}"` : ""
-    const direccionText = pedido.direccion ? `\nDirección de entrega: ${pedido.direccion}` : ""
+    const direccionText = (pedido.domicilio || pedido.direccion) ? `\nDomicilio de entrega: ${pedido.domicilio || pedido.direccion}` : ""
     
     const message = `¡Hola ${pedido.cliente}! Recibimos tu pedido N${pedido.numero_pedido} para el ${fechaEntrega}${horaEntrega}.${arregloNombre}${descripcionText}${mensajeTarjeta}${direccionText}\n\nTotal: L${pedido.precio_total.toFixed(2)}\nAbono: L${pedido.abono.toFixed(2)}\nSaldo pendiente: L${pedido.saldo.toFixed(2)}\n\n¡Gracias por tu preferencia!\n- Multiplanet Floristería`
     const url = createWhatsAppLink(pedido.telefono, message)
@@ -259,10 +259,15 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
                 <a href={`tel:${pedido.telefono}`} className="hover:underline">{pedido.telefono}</a>
               </div>
             )}
-            {pedido.direccion && (
-              <div className="flex items-center gap-2 text-muted-foreground col-span-2">
+            {(pedido.domicilio || pedido.direccion) && (
+              <div className="flex items-center gap-2 col-span-2">
                 <MapPin className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{pedido.direccion}</span>
+                <div className="min-w-0">
+                  <span className="font-semibold truncate block">{pedido.domicilio || pedido.direccion}</span>
+                  {pedido.direccion && pedido.domicilio && pedido.direccion !== pedido.domicilio && (
+                    <span className="text-xs text-muted-foreground truncate block">Dir. cliente: {pedido.direccion}</span>
+                  )}
+                </div>
               </div>
             )}
           </div>
