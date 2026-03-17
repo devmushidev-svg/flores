@@ -37,7 +37,7 @@ export function printPedidoTermica(pedido: Pedido) {
   const fechaEntrega = formatDateLong(pedido.fecha_entrega)
   const horaEntrega = formatTime(pedido.hora_entrega)
   const arregloNombre = pedido.arreglos?.nombre || "Arreglo personalizado"
-  const arregloCodigo = pedido.arreglos?.codigo?.trim() || null
+  const arregloCodigo = pedido.arreglos?.codigo?.trim() || null // Código del producto en negrita debajo del nombre
   const arregloFoto = pedido.arreglos?.foto_url
   const logoUrl = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png"
 
@@ -122,7 +122,7 @@ export function printPedidoCarta(pedido: Pedido) {
   const fechaEntrega = formatDateLong(pedido.fecha_entrega)
   const horaEntrega = formatTime(pedido.hora_entrega)
   const arregloNombre = pedido.arreglos?.nombre || "Arreglo personalizado"
-  const arregloCodigo = pedido.arreglos?.codigo?.trim() || null
+  const arregloCodigo = pedido.arreglos?.codigo?.trim() || null // Código del producto en negrita debajo del nombre
   const arregloFoto = pedido.arreglos?.foto_url
   const logoUrl = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png"
 

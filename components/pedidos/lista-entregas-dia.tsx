@@ -87,7 +87,7 @@ export function ListaEntregasDia() {
                 <td>${p.cliente}</td>
                 <td>${p.telefono || "-"}</td>
                 <td>${p.direccion || "-"}</td>
-                <td>${p.arreglos?.nombre || "-"}</td>
+                <td>${p.arreglos?.nombre || "-"}${p.arreglos?.codigo?.trim() ? ` <strong>(${p.arreglos.codigo.trim()})</strong>` : ""}</td>
                 <td>L${p.precio_total.toFixed(2)}</td>
                 <td><span class="estado">${p.estado}</span></td>
               </tr>
@@ -111,7 +111,7 @@ export function ListaEntregasDia() {
       p.cliente,
       p.telefono || "",
       p.direccion || "",
-      p.arreglos?.nombre || "",
+      p.arreglos?.codigo?.trim() ? `${p.arreglos?.nombre || ""} (${p.arreglos.codigo.trim()})` : (p.arreglos?.nombre || ""),
       p.precio_total.toFixed(2),
       p.estado,
     ])
@@ -183,7 +183,7 @@ export function ListaEntregasDia() {
                   <td className="p-2 font-medium">{p.cliente}</td>
                   <td className="p-2">{p.telefono || "-"}</td>
                   <td className="p-2 max-w-[120px] truncate" title={p.direccion || ""}>{p.direccion || "-"}</td>
-                  <td className="p-2">{p.arreglos?.nombre || "-"}</td>
+                  <td className="p-2">{p.arreglos?.nombre || "-"}{p.arreglos?.codigo?.trim() ? <><br /><span className="font-bold text-xs">{p.arreglos.codigo.trim()}</span></> : null}</td>
                   <td className="p-2 text-right">L{p.precio_total.toFixed(2)}</td>
                   <td className="p-2">
                     <span className={`px-2 py-0.5 rounded text-xs ${ESTADO_COLORS[p.estado]}`}>
