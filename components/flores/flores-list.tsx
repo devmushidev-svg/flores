@@ -221,18 +221,23 @@ export function FloresList() {
           </div>
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-12 animate-fade-in">
               <Spinner className="h-8 w-8 text-primary" />
             </div>
           ) : flores && flores.length > 0 ? (
             <div className="space-y-3">
-              {flores.map((flor) => (
-                <FlorCard
+              {flores.map((flor, idx) => (
+                <div 
                   key={flor.id}
-                  flor={flor}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
+                  className="animate-fade-in-up opacity-0"
+                  style={{ animationDelay: `${idx * 50}ms` }}
+                >
+                  <FlorCard
+                    flor={flor}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                </div>
               ))}
             </div>
           ) : (

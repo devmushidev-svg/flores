@@ -279,7 +279,7 @@ export function CalendarioView() {
       />
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-12 animate-fade-in">
           <Spinner className="h-8 w-8 text-primary" />
         </div>
       ) : (

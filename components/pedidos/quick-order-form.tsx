@@ -33,6 +33,9 @@ interface QuickOrderFormProps {
     mensaje_tarjeta: string
     precio_total: number
     abono: number
+    pago_efectivo: number
+    pago_tarjeta: number
+    pago_transferencia: number
     estado: "Pendiente"
   }) => Promise<void>
 }
@@ -136,6 +139,7 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
     if (!cliente.trim() || !selectedArreglo || !precioTotal) return
 
     setIsSubmitting(true)
+    const abonoVal = parseFloat(abono) || 0
     await onSubmit({
       cliente: cliente.trim(),
       telefono: telefono.trim(),
@@ -146,7 +150,10 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
       descripcion: "",
       mensaje_tarjeta: "",
       precio_total: parseFloat(precioTotal),
-      abono: parseFloat(abono) || 0,
+      abono: abonoVal,
+      pago_efectivo: abonoVal,
+      pago_tarjeta: 0,
+      pago_transferencia: 0,
       estado: "Pendiente"
     })
     
@@ -303,13 +310,13 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
                   onClick={() => handleSelectArreglo(arreglo)}
                 >
                   <CardContent className="p-3 flex gap-3 items-center">
-                    <div className="w-14 h-14 rounded-lg bg-muted relative overflow-hidden flex-shrink-0">
+                    <div className="w-14 h-14 rounded-xl bg-muted relative overflow-hidden flex-shrink-0 shadow-md ring-1 ring-black/5">
                       {arreglo.foto_url ? (
                         <Image
                           src={arreglo.foto_url}
                           alt={arreglo.nombre}
                           fill
-                          className="object-cover"
+                          className="object-cover rounded-xl"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -360,13 +367,13 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
                   <span>{fechaEntrega} {horaEntrega && `a las ${horaEntrega}`}</span>
                 </div>
                 <div className="flex items-center gap-3 pt-2 border-t">
-                  <div className="w-12 h-12 rounded-lg bg-muted relative overflow-hidden flex-shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-muted relative overflow-hidden flex-shrink-0 shadow-md ring-1 ring-black/5">
                     {selectedArreglo.foto_url ? (
                       <Image
                         src={selectedArreglo.foto_url}
                         alt={selectedArreglo.nombre}
                         fill
-                        className="object-cover"
+                        className="object-cover rounded-xl"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">

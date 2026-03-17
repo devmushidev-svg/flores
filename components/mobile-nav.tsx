@@ -18,8 +18,8 @@ export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border">
-      <div className="flex items-center justify-around py-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-t border-white/20 shadow-[0_-8px_32px_-8px_rgba(0,0,0,0.08)] animate-slide-up">
+      <div className="flex items-center justify-around py-3 px-2 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href || 
             (item.href !== "/" && pathname.startsWith(item.href))
@@ -30,14 +30,14 @@ export function MobileNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors min-w-[60px]",
+                "flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-2xl min-w-[64px] transition-all duration-300 ease-out active:scale-95",
                 isActive 
-                  ? "text-primary bg-accent" 
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "text-white bg-gradient-primary shadow-lg shadow-primary/25 scale-105" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10"
               )}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{item.label}</span>
+              <Icon className={cn("h-5 w-5 transition-transform duration-300", isActive && "scale-110")} />
+              <span className="text-xs font-semibold">{item.label}</span>
             </Link>
           )
         })}

@@ -33,14 +33,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { Pedido } from "@/lib/types"
-import { ESTADO_COLORS } from "@/lib/types"
+import { ESTADO_COLORS, METODO_PAGO_LABELS, type MetodoPago } from "@/lib/types"
 
 interface PedidoCardProps {
   pedido: Pedido
   onEdit: (pedido: Pedido) => void
   onDelete: (id: string) => Promise<void>
   onStatusChange?: (id: string, estado: Pedido['estado']) => Promise<void>
-  onPaymentUpdate?: (id: string, nuevoAbono: number) => Promise<void>
+  onPaymentUpdate?: (id: string, amount: number, metodoPago: MetodoPago) => Promise<void>
 }
 
 function formatDate(dateStr: string) {
@@ -83,6 +83,7 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<MetodoPago>("efectivo")
   const [isDeleting, setIsDeleting] = useState(false)
   const [isChangingStatus, setIsChangingStatus] = useState(false)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
@@ -115,42 +116,50 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
     if (isNaN(amount) || amount <= 0) return
     
     setIsProcessingPayment(true)
-    const nuevoAbono = pedido.abono + amount
-    await onPaymentUpdate(pedido.id, nuevoAbono)
+    await onPaymentUpdate(pedido.id, amount, paymentMethod)
     setIsProcessingPayment(false)
     setShowPaymentDialog(false)
     setPaymentAmount("")
   }
 
-  const handlePayFullBalance = async () => {
-    if (!onPaymentUpdate) return
-    setIsProcessingPayment(true)
-    const nuevoAbono = pedido.precio_total
-    await onPaymentUpdate(pedido.id, nuevoAbono)
-    setIsProcessingPayment(false)
-    setShowPaymentDialog(false)
-    setPaymentAmount("")
+  const handlePayFullBalance = () => {
+    setPaymentAmount(pedido.saldo.toFixed(2))
   }
 
   const openPaymentDialog = () => {
     setPaymentAmount("")
+    setPaymentMethod("efectivo")
     setShowPaymentDialog(true)
   }
 
   const isPaid = pedido.saldo <= 0
   const isCancelledOrDelivered = pedido.estado === 'Cancelado' || pedido.estado === 'Entregado'
 
-  // Print thermal receipt
+  // Print thermal receipt - use iframe to avoid popup blockers
   const handlePrintReceipt = () => {
     const fechaEntrega = formatDateLong(pedido.fecha_entrega)
     const horaEntrega = pedido.hora_entrega ? formatTime(pedido.hora_entrega) : "No especificada"
     const arregloNombre = pedido.arreglos?.nombre || "Arreglo personalizado"
     const arregloFoto = pedido.arreglos?.foto_url
-    
-    const printWindow = window.open("", "_blank", "width=300,height=600")
-    if (!printWindow) return
+    const logoUrl = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png"
 
-    printWindow.document.write(`
+    const iframe = document.createElement("iframe")
+    iframe.style.position = "fixed"
+    iframe.style.right = "0"
+    iframe.style.bottom = "0"
+    iframe.style.width = "0"
+    iframe.style.height = "0"
+    iframe.style.border = "none"
+    document.body.appendChild(iframe)
+
+    const doc = iframe.contentWindow?.document
+    if (!doc) {
+      document.body.removeChild(iframe)
+      return
+    }
+
+    doc.open()
+    doc.write(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -207,7 +216,7 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
       <body>
         <div class="header">
           <div class="logo">
-            <img src="/logo.png" alt="Logo" onerror="this.style.display='none'" />
+            <img src="${logoUrl}" alt="Logo" onerror="this.style.display='none'" />
           </div>
           <div class="business-name">Multiplanet Floristeria</div>
           <div class="business-info">
@@ -231,16 +240,10 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
             <span class="value">${pedido.telefono}</span>
           </div>
           ` : ""}
-          ${pedido.direccion ? `
-          <div class="full-row">
-            <span class="label">Direccion:</span>
-            <span class="value">${pedido.direccion}</span>
-          </div>
-          ` : ""}
         </div>
 
         <div class="section">
-          <div class="section-title">Entrega</div>
+          <div class="section-title">Informacion de envio domicilio:</div>
           <div class="row">
             <span class="label">Fecha:</span>
             <span class="value value-bold">${fechaEntrega}</span>
@@ -249,6 +252,12 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
             <span class="label">Hora:</span>
             <span class="value value-bold">${horaEntrega}</span>
           </div>
+          ${pedido.direccion ? `
+          <div class="full-row">
+            <span class="label">Domicilio / Lugar:</span>
+            <span class="value">${pedido.direccion}</span>
+          </div>
+          ` : ""}
         </div>
 
         <div class="section">
@@ -257,6 +266,12 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
           ${arregloFoto ? `
           <div class="arreglo-img">
             <img src="${arregloFoto}" alt="${arregloNombre}" onerror="this.style.display='none'" />
+          </div>
+          ` : ""}
+          ${pedido.arreglos?.codigo ? `
+          <div class="row" style="margin-top: 4px;">
+            <span class="label">Codigo:</span>
+            <span class="value value-bold">${pedido.arreglos.codigo}</span>
           </div>
           ` : ""}
           ${pedido.descripcion ? `
@@ -274,16 +289,28 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
         <div class="totals">
           <div class="section-title">Pago</div>
           <div class="row">
-            <span class="label">Total:</span>
-            <span class="value">L${pedido.precio_total.toFixed(2)}</span>
+            <span class="label">Efectivo:</span>
+            <span class="value">L${(pedido.pago_efectivo ?? 0).toFixed(2)}</span>
           </div>
           <div class="row">
-            <span class="label">Abonado:</span>
+            <span class="label">Tarjeta:</span>
+            <span class="value">L${(pedido.pago_tarjeta ?? 0).toFixed(2)}</span>
+          </div>
+          <div class="row">
+            <span class="label">Transferencia:</span>
+            <span class="value">L${(pedido.pago_transferencia ?? 0).toFixed(2)}</span>
+          </div>
+          <div class="row" style="border-top: 1px dashed #000; padding-top: 4px; margin-top: 4px;">
+            <span class="label">Total abonado:</span>
             <span class="value">L${pedido.abono.toFixed(2)}</span>
           </div>
-          <div class="row total-row">
-            <span class="label">SALDO:</span>
+          <div class="row">
+            <span class="label">Saldo pendiente:</span>
             <span class="value">L${pedido.saldo.toFixed(2)}</span>
+          </div>
+          <div class="row total-row">
+            <span class="label">GRAN TOTAL:</span>
+            <span class="value">L${pedido.precio_total.toFixed(2)}</span>
           </div>
         </div>
 
@@ -298,14 +325,30 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
       </body>
       </html>
     `)
-    
-    printWindow.document.close()
-    printWindow.focus()
-    
-    // Wait for images to load then print
-    setTimeout(() => {
-      printWindow.print()
-    }, 500)
+    doc.close()
+
+    const win = iframe.contentWindow
+    if (!win) {
+      document.body.removeChild(iframe)
+      return
+    }
+
+    let printed = false
+    const doPrint = () => {
+      if (printed) return
+      printed = true
+      try {
+        win.focus()
+        win.print()
+      } finally {
+        setTimeout(() => {
+          if (iframe.parentNode) document.body.removeChild(iframe)
+        }, 1500)
+      }
+    }
+
+    win.onload = doPrint
+    setTimeout(doPrint, 600)
   }
 
   // WhatsApp message generators
@@ -340,7 +383,7 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
 
   return (
     <>
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99]">
         <CardContent className="p-4 space-y-3">
           {/* Order number badge and quick actions */}
           <div className="flex items-center justify-between gap-2">
@@ -393,13 +436,13 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
           <div className="flex items-start gap-3">
             {/* Arrangement photo */}
             {pedido.arreglos?.foto_url && (
-              <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
+              <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-muted shadow-md ring-1 ring-black/5">
                 <Image
                   src={pedido.arreglos.foto_url}
                   alt={pedido.arreglos.nombre || "Arreglo"}
                   width={64}
                   height={64}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded-xl"
                 />
               </div>
             )}
@@ -649,6 +692,25 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
               <div className="flex justify-between text-base pt-2 border-t">
                 <span className="font-semibold">Saldo pendiente:</span>
                 <span className="font-bold text-amber-600">L{pedido.saldo.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Payment method */}
+            <div className="space-y-2">
+              <Label>Forma de pago</Label>
+              <div className="flex gap-2">
+                {(['efectivo', 'tarjeta', 'transferencia'] as const).map((metodo) => (
+                  <Button
+                    key={metodo}
+                    type="button"
+                    variant={paymentMethod === metodo ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setPaymentMethod(metodo)}
+                  >
+                    {METODO_PAGO_LABELS[metodo]}
+                  </Button>
+                ))}
               </div>
             </div>
 

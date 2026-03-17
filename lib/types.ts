@@ -17,6 +17,7 @@ export interface Flor {
 
 export interface Arreglo {
   id: string
+  codigo?: string | null
   nombre: string
   descripcion: string | null
   foto_url: string | null
@@ -40,6 +41,16 @@ export interface ArregloWithFlores extends Arreglo {
   ganancia_estimada?: number
 }
 
+export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia'
+
+export const METODOS_PAGO: MetodoPago[] = ['efectivo', 'tarjeta', 'transferencia']
+
+export const METODO_PAGO_LABELS: Record<MetodoPago, string> = {
+  efectivo: 'Efectivo',
+  tarjeta: 'Tarjeta',
+  transferencia: 'Transferencia'
+}
+
 export interface Pedido {
   id: string
   numero_pedido: number
@@ -54,6 +65,9 @@ export interface Pedido {
   precio_total: number
   abono: number
   saldo: number
+  pago_efectivo?: number
+  pago_tarjeta?: number
+  pago_transferencia?: number
   estado: 'Pendiente' | 'En preparación' | 'En ruta' | 'Entregado' | 'Cancelado'
   created_at: string
   arreglos?: Arreglo

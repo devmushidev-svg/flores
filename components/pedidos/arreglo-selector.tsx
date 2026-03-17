@@ -172,13 +172,13 @@ export function ArregloSelector({
                   >
                     <CardContent className="p-3 flex gap-3">
                       {/* Image */}
-                      <div className="w-16 h-16 rounded-lg bg-muted relative overflow-hidden flex-shrink-0">
+                      <div className="w-16 h-16 rounded-xl bg-muted relative overflow-hidden flex-shrink-0 shadow-md ring-1 ring-black/5">
                         {arreglo.foto_url ? (
                           <Image
                             src={arreglo.foto_url}
                             alt={arreglo.nombre}
                             fill
-                            className="object-cover"
+                            className="object-cover rounded-xl"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
@@ -191,6 +191,9 @@ export function ArregloSelector({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
+                            {arreglo.codigo && (
+                              <span className="text-xs font-mono text-primary font-medium block mb-0.5">{arreglo.codigo}</span>
+                            )}
                             <h4 className="font-medium text-sm truncate">{arreglo.nombre}</h4>
                             {arreglo.descripcion && (
                               <p className="text-xs text-muted-foreground line-clamp-1">
