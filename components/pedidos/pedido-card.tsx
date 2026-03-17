@@ -32,6 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { printPedidoTermica, printPedidoCarta } from "@/lib/print-pedido"
 import type { Pedido } from "@/lib/types"
 import { ESTADO_COLORS, METODO_PAGO_LABELS, type MetodoPago } from "@/lib/types"
 
@@ -135,221 +136,8 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
   const isPaid = pedido.saldo <= 0
   const isCancelledOrDelivered = pedido.estado === 'Cancelado' || pedido.estado === 'Entregado'
 
-  // Print thermal receipt - use iframe to avoid popup blockers
-  const handlePrintReceipt = () => {
-    const fechaEntrega = formatDateLong(pedido.fecha_entrega)
-    const horaEntrega = pedido.hora_entrega ? formatTime(pedido.hora_entrega) : "No especificada"
-    const arregloNombre = pedido.arreglos?.nombre || "Arreglo personalizado"
-    const arregloFoto = pedido.arreglos?.foto_url
-    const logoUrl = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png"
-
-    const iframe = document.createElement("iframe")
-    iframe.style.position = "fixed"
-    iframe.style.right = "0"
-    iframe.style.bottom = "0"
-    iframe.style.width = "0"
-    iframe.style.height = "0"
-    iframe.style.border = "none"
-    document.body.appendChild(iframe)
-
-    const doc = iframe.contentWindow?.document
-    if (!doc) {
-      document.body.removeChild(iframe)
-      return
-    }
-
-    doc.open()
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Pedido N${pedido.numero_pedido}</title>
-        <style>
-          @page { margin: 0; size: 80mm auto; }
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body {
-            font-family: 'Arial', 'Helvetica', sans-serif;
-            font-size: 14px;
-            font-weight: 600;
-            width: 80mm;
-            padding: 6px;
-            line-height: 1.3;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .header { text-align: center; margin-bottom: 8px; border-bottom: 3px solid #000; padding-bottom: 8px; }
-          .logo { width: 50px; height: 50px; margin: 0 auto 6px; }
-          .logo img { width: 100%; height: 100%; object-fit: contain; }
-          .business-name { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
-          .business-info { font-size: 11px; font-weight: 600; margin-top: 4px; line-height: 1.4; }
-          .order-number { font-size: 28px; font-weight: 900; margin: 8px 0; text-align: center; background: #000; color: #fff; padding: 6px 4px; letter-spacing: 2px; }
-          .section { margin: 6px 0; padding: 6px 0; border-bottom: 1px dashed #000; }
-          .section-title { font-weight: 900; font-size: 13px; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid #000; padding-bottom: 2px; }
-          .row { display: flex; justify-content: space-between; margin: 3px 0; font-size: 13px; }
-          .label { font-weight: 700; }
-          .value { font-weight: 600; text-align: right; max-width: 55%; word-break: break-word; }
-          .value-bold { font-weight: 900; font-size: 14px; }
-          .full-row { margin: 3px 0; }
-          .full-row .label { display: block; margin-bottom: 1px; font-weight: 700; }
-          .full-row .value { text-align: left; max-width: 100%; padding-left: 6px; font-weight: 600; }
-          .totals { border: 2px solid #000; padding: 6px; margin: 8px 0; }
-          .totals .section-title { border-bottom: none; margin-bottom: 2px; }
-          .totals .row { font-size: 14px; font-weight: 700; margin: 2px 0; }
-          .totals .total-row { font-size: 20px; font-weight: 900; border-top: 2px solid #000; padding-top: 4px; margin-top: 4px; }
-          .totals .total-row .value { font-size: 22px; }
-          .footer { text-align: center; margin-top: 8px; font-size: 11px; border-top: 3px solid #000; padding-top: 8px; }
-          .thank-you { font-weight: 900; font-size: 14px; margin-bottom: 2px; text-transform: uppercase; }
-          .arreglo-name { font-size: 15px; font-weight: 900; text-align: center; margin: 4px 0; text-transform: uppercase; }
-          .arreglo-img { text-align: center; margin: 6px 0; }
-          .arreglo-img img { max-width: 90%; max-height: 100px; object-fit: contain; border: 2px solid #000; }
-          .nota-box { border: 2px solid #000; padding: 4px 6px; margin: 4px 0; font-size: 12px; font-weight: 700; }
-          .nota-box strong { font-weight: 900; text-transform: uppercase; }
-          .tarjeta-box { border: 2px dashed #000; padding: 4px 6px; margin: 4px 0; font-style: italic; font-size: 12px; font-weight: 600; }
-          .tarjeta-box strong { font-weight: 900; font-style: normal; }
-          .status-badge { display: inline-block; background: #000; color: #fff; padding: 2px 8px; font-size: 12px; font-weight: 900; text-transform: uppercase; margin-top: 4px; }
-          @media print {
-            body { width: 100%; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="logo">
-            <img src="${logoUrl}" alt="Logo" onerror="this.style.display='none'" />
-          </div>
-          <div class="business-name">Multiplanet Floristeria</div>
-          <div class="business-info">
-            Barrio el centro, Tocoa Colon<br>
-            Segunda planta Multiplanet<br>
-            Tel: +504 95841794
-          </div>
-        </div>
-
-        <div class="order-number">PEDIDO N${pedido.numero_pedido}</div>
-
-        <div class="section">
-          <div class="section-title">Informacion del Cliente</div>
-          <div class="row">
-            <span class="label">Cliente:</span>
-            <span class="value">${pedido.cliente}</span>
-          </div>
-          ${pedido.telefono ? `
-          <div class="row">
-            <span class="label">Telefono:</span>
-            <span class="value">${pedido.telefono}</span>
-          </div>
-          ` : ""}
-        </div>
-
-        <div class="section">
-          <div class="section-title">Informacion de envio domicilio:</div>
-          <div class="row">
-            <span class="label">Fecha:</span>
-            <span class="value value-bold">${fechaEntrega}</span>
-          </div>
-          <div class="row">
-            <span class="label">Hora:</span>
-            <span class="value value-bold">${horaEntrega}</span>
-          </div>
-          ${pedido.direccion ? `
-          <div class="full-row">
-            <span class="label">Domicilio / Lugar:</span>
-            <span class="value">${pedido.direccion}</span>
-          </div>
-          ` : ""}
-        </div>
-
-        <div class="section">
-          <div class="section-title">Arreglo</div>
-          <div class="arreglo-name">${arregloNombre}</div>
-          ${arregloFoto ? `
-          <div class="arreglo-img">
-            <img src="${arregloFoto}" alt="${arregloNombre}" onerror="this.style.display='none'" />
-          </div>
-          ` : ""}
-          ${pedido.arreglos?.codigo ? `
-          <div class="row" style="margin-top: 4px;">
-            <span class="label">Codigo:</span>
-            <span class="value value-bold">${pedido.arreglos.codigo}</span>
-          </div>
-          ` : ""}
-          ${pedido.descripcion ? `
-          <div class="nota-box">
-            <strong>NOTA:</strong> ${pedido.descripcion}
-          </div>
-          ` : ""}
-          ${pedido.mensaje_tarjeta ? `
-          <div class="tarjeta-box">
-            <strong>TARJETA:</strong> "${pedido.mensaje_tarjeta}"
-          </div>
-          ` : ""}
-        </div>
-
-        <div class="totals">
-          <div class="section-title">Pago</div>
-          <div class="row">
-            <span class="label">Efectivo:</span>
-            <span class="value">L${(pedido.pago_efectivo ?? 0).toFixed(2)}</span>
-          </div>
-          <div class="row">
-            <span class="label">Tarjeta:</span>
-            <span class="value">L${(pedido.pago_tarjeta ?? 0).toFixed(2)}</span>
-          </div>
-          <div class="row">
-            <span class="label">Transferencia:</span>
-            <span class="value">L${(pedido.pago_transferencia ?? 0).toFixed(2)}</span>
-          </div>
-          <div class="row" style="border-top: 1px dashed #000; padding-top: 4px; margin-top: 4px;">
-            <span class="label">Total abonado:</span>
-            <span class="value">L${pedido.abono.toFixed(2)}</span>
-          </div>
-          <div class="row">
-            <span class="label">Saldo pendiente:</span>
-            <span class="value">L${pedido.saldo.toFixed(2)}</span>
-          </div>
-          <div class="row total-row">
-            <span class="label">GRAN TOTAL:</span>
-            <span class="value">L${pedido.precio_total.toFixed(2)}</span>
-          </div>
-        </div>
-
-        <div style="text-align:center; margin: 6px 0;">
-          <span class="status-badge">${pedido.estado}</span>
-        </div>
-
-        <div class="footer">
-          <div class="thank-you">Gracias por su preferencia!</div>
-          <div>Multiplanet Floristeria</div>
-        </div>
-      </body>
-      </html>
-    `)
-    doc.close()
-
-    const win = iframe.contentWindow
-    if (!win) {
-      document.body.removeChild(iframe)
-      return
-    }
-
-    let printed = false
-    const doPrint = () => {
-      if (printed) return
-      printed = true
-      try {
-        win.focus()
-        win.print()
-      } finally {
-        setTimeout(() => {
-          if (iframe.parentNode) document.body.removeChild(iframe)
-        }, 1500)
-      }
-    }
-
-    win.onload = doPrint
-    setTimeout(doPrint, 600)
-  }
+  const handlePrintReceipt = () => printPedidoTermica(pedido)
+  const handlePrintReceiptCarta = () => printPedidoCarta(pedido)
 
   // WhatsApp message generators
   const handleChatCliente = () => {
@@ -562,16 +350,27 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
 
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="flex items-center gap-1">
-              {/* Print receipt */}
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                onClick={handlePrintReceipt}
-              >
-                <Printer className="h-4 w-4" />
-                <span className="sr-only">Imprimir</span>
-              </Button>
+              {/* Print receipt - dropdown: Térmica / Carta */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span className="sr-only">Imprimir</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handlePrintReceipt}>
+                    Térmica (ticket)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handlePrintReceiptCarta}>
+                    Carta (imagen grande)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               {/* WhatsApp dropdown */}
               {pedido.telefono && (
                 <DropdownMenu>

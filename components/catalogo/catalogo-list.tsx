@@ -62,6 +62,7 @@ export function CatalogoList() {
     descripcion: string
     foto_url: string | null
     precio_real: number
+    categoria?: string | null
     flores: FlorItem[]
   }) => {
     const supabase = createClient()
@@ -74,7 +75,8 @@ export function CatalogoList() {
         nombre: data.nombre,
         descripcion: data.descripcion,
         foto_url: data.foto_url,
-        precio_real: data.precio_real
+        precio_real: data.precio_real,
+        categoria: data.categoria || null,
       }])
       .select()
       .single()
@@ -105,6 +107,7 @@ export function CatalogoList() {
     descripcion: string
     foto_url: string | null
     precio_real: number
+    categoria?: string | null
     flores: FlorItem[]
   }) => {
     if (!editingArreglo) return
@@ -118,7 +121,8 @@ export function CatalogoList() {
         nombre: data.nombre,
         descripcion: data.descripcion,
         foto_url: data.foto_url,
-        precio_real: data.precio_real
+        precio_real: data.precio_real,
+        categoria: data.categoria || null,
       })
       .eq("id", editingArreglo.id)
     
@@ -160,6 +164,47 @@ export function CatalogoList() {
 
   const handleEdit = (arreglo: ArregloWithFlores) => {
     setEditingArreglo(arreglo)
+  }
+
+  const handleDuplicate = async (arreglo: ArregloWithFlores) => {
+    const supabase = createClient()
+    const { data: newArreglo, error: arregloError } = await supabase
+      .from("arreglos")
+      .insert([{
+        codigo: arreglo.codigo ? `${arreglo.codigo}-copia` : null,
+        nombre: `${arreglo.nombre} (copia)`,
+        descripcion: arreglo.descripcion,
+        foto_url: arreglo.foto_url,
+        precio_real: arreglo.precio_real,
+        categoria: arreglo.categoria || null,
+      }])
+      .select()
+      .single()
+    if (arregloError) {
+      alert("Error al duplicar: " + arregloError.message)
+      return
+    }
+    if (arreglo.arreglo_flores?.length && newArreglo) {
+      const floresData = arreglo.arreglo_flores.map((af) => ({
+        arreglo_id: newArreglo.id,
+        flor_id: af.flor_id,
+        cantidad: af.cantidad,
+      }))
+      await supabase.from("arreglo_flores").insert(floresData)
+    }
+    mutateArreglos()
+    const dupWithFlores: ArregloWithFlores = {
+      ...newArreglo,
+      arreglo_flores: (arreglo.arreglo_flores || []).map((af) => ({
+        ...af,
+        id: "",
+        arreglo_id: newArreglo.id,
+        created_at: "",
+        flores: af.flores,
+      })),
+    }
+    setEditingArreglo(dupWithFlores)
+    setShowForm(true)
   }
 
   const isLoading = arreglosLoading || floresLoading
@@ -210,6 +255,7 @@ export function CatalogoList() {
                 arreglo={arreglo}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onDuplicate={handleDuplicate}
               />
             </div>
           ))}

@@ -15,6 +15,15 @@ export interface Flor {
   created_at: string
 }
 
+export interface Insumo {
+  id: string
+  nombre: string
+  precio_actual: number
+  unidad?: string
+  is_active: boolean
+  created_at: string
+}
+
 export interface Arreglo {
   id: string
   codigo?: string | null
@@ -22,9 +31,13 @@ export interface Arreglo {
   descripcion: string | null
   foto_url: string | null
   precio_real: number
+  categoria?: string | null
   is_active: boolean
   created_at: string
 }
+
+export const CATEGORIAS_ARREGLO = ["Ramo", "Centro de mesa", "Funeral", "Boda", "Aniversario", "Otro"] as const
+export type CategoriaArreglo = (typeof CATEGORIAS_ARREGLO)[number]
 
 export interface ArregloFlor {
   id: string

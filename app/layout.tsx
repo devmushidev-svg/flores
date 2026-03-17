@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { Toaster } from 'sonner'
+import { SwRegister } from '@/components/sw-register'
 import './globals.css'
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -52,7 +54,9 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${geist.variable} ${geistMono.variable}`}>
       <body className="font-sans antialiased">
+        <SwRegister />
         {children}
+        <Toaster position="top-center" richColors closeButton />
         <Analytics />
       </body>
     </html>

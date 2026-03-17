@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { Upload, X, Loader2, CheckCircle } from "lucide-react"
+import { Upload, X, Loader2, CheckCircle, SplitSquareVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,6 +15,7 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import { uploadToCloudinary } from "@/lib/cloudinary"
 import { pdfPagesToImages } from "@/lib/pdf-utils"
+import { splitImageInHalf } from "@/lib/image-split"
 import { createClient } from "@/lib/supabase/client"
 
 interface ImportItem {
@@ -38,6 +39,7 @@ export function CatalogoImport({ open, onOpenChange, onSuccess }: CatalogoImport
   const [isProcessing, setIsProcessing] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const [splittingId, setSplittingId] = useState<string | null>(null)
 
   const addFiles = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files)
@@ -80,6 +82,7 @@ export function CatalogoImport({ open, onOpenChange, onSuccess }: CatalogoImport
             id: crypto.randomUUID(),
             file,
             preview,
+            codigo: "",
             nombre: `Arreglo ${i + 1}`,
             precio: "",
             status: "pending",
@@ -119,6 +122,31 @@ export function CatalogoImport({ open, onOpenChange, onSuccess }: CatalogoImport
     setItems((prev) =>
       prev.map((i) => (i.id === id ? { ...i, [field]: value } : i))
     )
+  }
+
+  const handleSplitItem = async (id: string) => {
+    const item = items.find((i) => i.id === id)
+    if (!item || item.status === "uploading") return
+    setSplittingId(id)
+    try {
+      const [topFile, bottomFile] = await splitImageInHalf(item.file)
+      const topPreview = URL.createObjectURL(topFile)
+      const bottomPreview = URL.createObjectURL(bottomFile)
+      const baseName = item.nombre.replace(/\s*\(\d+\)$/, "")
+      const newItems: ImportItem[] = [
+        { id: crypto.randomUUID(), file: topFile, preview: topPreview, codigo: "", nombre: `${baseName} (1)`, precio: "", status: "pending" },
+        { id: crypto.randomUUID(), file: bottomFile, preview: bottomPreview, codigo: "", nombre: `${baseName} (2)`, precio: "", status: "pending" },
+      ]
+      setItems((prev) => {
+        URL.revokeObjectURL(item.preview)
+        return prev.filter((i) => i.id !== id).concat(newItems)
+      })
+    } catch (err) {
+      console.error("Error splitting image:", err)
+      alert("No se pudo dividir la imagen.")
+    } finally {
+      setSplittingId(null)
+    }
   }
 
   const handleImport = async () => {
@@ -182,7 +210,7 @@ export function CatalogoImport({ open, onOpenChange, onSuccess }: CatalogoImport
         <DialogHeader>
           <DialogTitle>Importar catálogo</DialogTitle>
           <DialogDescription>
-            Sube imágenes o un PDF desde Canva. Cada imagen o página se convertirá en un arreglo. Completa nombre y precio para cada uno.
+            Sube imágenes o PDF desde Canva. Cada imagen o página se convierte en un arreglo. Si un flyer tiene varios arreglos (ej. Día de las Madres), usa el botón &quot;Dividir&quot; para separarlos en 2. Completa nombre y precio.
           </DialogDescription>
         </DialogHeader>
 
@@ -293,16 +321,33 @@ export function CatalogoImport({ open, onOpenChange, onSuccess }: CatalogoImport
                       </div>
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="flex-shrink-0"
-                    onClick={() => removeItem(item.id)}
-                    disabled={item.status === "uploading"}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="flex flex-shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleSplitItem(item.id)}
+                      disabled={item.status === "uploading" || splittingId !== null}
+                      title="Dividir en 2 (para flyers con varios arreglos)"
+                    >
+                      {splittingId === item.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <SplitSquareVertical className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => removeItem(item.id)}
+                      disabled={item.status === "uploading"}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

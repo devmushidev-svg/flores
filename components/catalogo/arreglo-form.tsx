@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { FlorCombobox } from "./flor-combobox"
 import {
   Select,
   SelectContent,
@@ -23,7 +24,7 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import { uploadToCloudinary } from "@/lib/cloudinary"
 import { isHeicFormat } from "@/lib/image-converter"
-import type { Flor, ArregloWithFlores, ArregloFlor } from "@/lib/types"
+import { CATEGORIAS_ARREGLO, type Flor, type ArregloWithFlores, type ArregloFlor } from "@/lib/types"
 
 interface FlorItem {
   flor_id: string
@@ -42,12 +43,14 @@ interface ArregloFormProps {
     descripcion: string
     foto_url: string | null
     precio_real: number
+    categoria: string | null
     flores: FlorItem[]
   }) => Promise<void>
 }
 
 export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: ArregloFormProps) {
   const [codigo, setCodigo] = useState("")
+  const [categoria, setCategoria] = useState("")
   const [nombre, setNombre] = useState("")
   const [descripcion, setDescripcion] = useState("")
   const [fotoUrl, setFotoUrl] = useState<string | null>(null)
@@ -71,6 +74,7 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
   useEffect(() => {
     if (open && arreglo) {
       setCodigo(arreglo.codigo || "")
+      setCategoria(arreglo.categoria || "")
       setNombre(arreglo.nombre)
       setDescripcion(arreglo.descripcion || "")
       setFotoUrl(arreglo.foto_url)
@@ -151,6 +155,7 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
     const codigoVal = codigo.trim() || null
     await onSubmit({
       codigo: codigoVal,
+      categoria: categoria.trim() || null,
       nombre: nombre.trim(),
       descripcion: descripcion.trim(),
       foto_url: fotoUrl,
@@ -218,9 +223,10 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
             </div>
           </div>
 
-          {/* Código del arreglo (después de la foto) */}
-          <div className="space-y-2">
-            <Label htmlFor="codigo">Código</Label>
+          {/* Código y categoría */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="codigo">Código</Label>
             <Input
               id="codigo"
               placeholder="Ej: AR-001, Ramo-01"
@@ -228,6 +234,21 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
               onChange={(e) => setCodigo(e.target.value)}
               autoComplete="off"
             />
+            </div>
+            <div className="space-y-2">
+              <Label>Categoría</Label>
+              <Select value={categoria || "none"} onValueChange={(v) => setCategoria(v === "none" ? "" : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIAS_ARREGLO.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                  <SelectItem value="none">Ninguna</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Basic Info */}
@@ -281,21 +302,14 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
               <div className="space-y-2">
                 {floresSeleccionadas.map((item, index) => (
                   <div key={index} className="flex items-center gap-2">
-                    <Select
+                    <FlorCombobox
+                      flores={flores}
                       value={item.flor_id}
-                      onValueChange={(value) => handleFlorChange(index, value)}
-                    >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Seleccionar flor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {flores.map((flor) => (
-                          <SelectItem key={flor.id} value={flor.id}>
-                            {flor.nombre} - L{flor.precio_actual.toFixed(2)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onSelect={(florId) => handleFlorChange(index, florId)}
+                      placeholder="Buscar flor..."
+                      disabled={false}
+                      className="flex-1 h-9"
+                    />
                     <input
                       type="text"
                       inputMode="numeric"

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { Pencil, Trash2, ImageIcon } from "lucide-react"
+import { Pencil, Trash2, ImageIcon, Copy } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { 
@@ -21,9 +21,10 @@ interface ArregloCardProps {
   arreglo: ArregloWithFlores
   onEdit: (arreglo: ArregloWithFlores) => void
   onDelete: (id: string) => Promise<void>
+  onDuplicate?: (arreglo: ArregloWithFlores) => void
 }
 
-export function ArregloCard({ arreglo, onEdit, onDelete }: ArregloCardProps) {
+export function ArregloCard({ arreglo, onEdit, onDelete, onDuplicate }: ArregloCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -83,6 +84,18 @@ export function ArregloCard({ arreglo, onEdit, onDelete }: ArregloCardProps) {
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
+                {onDuplicate && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8"
+                    onClick={() => onDuplicate(arreglo)}
+                    title="Duplicar"
+                  >
+                    <Copy className="h-4 w-4" />
+                    <span className="sr-only">Duplicar</span>
+                  </Button>
+                )}
                 <Button 
                   variant="ghost" 
                   size="icon" 

@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useEffect, useRef } from "react"
+import { toast } from "sonner"
 import useSWR from "swr"
 import Link from "next/link"
 import { ShoppingBag, Clock, CheckCircle, DollarSign, Plus, ChevronRight, Wallet, MapPin, Phone, MessageCircle, Send, Truck, Flower2, BookOpen } from "lucide-react"
@@ -16,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { PageHeader } from "@/components/page-header"
+import { EnablePush } from "@/components/notifications/enable-push"
 import { StatCard } from "./stat-card"
 import { createClient } from "@/lib/supabase/client"
 import type { Pedido } from "@/lib/types"
@@ -87,6 +89,35 @@ export function DashboardView() {
     }
   }, [pedidos, today])
 
+  const tomorrow = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    return d.toISOString().split("T")[0]
+  }, [])
+
+  const pedidosManana = useMemo(() => {
+    if (!pedidos) return []
+    return pedidos.filter(
+      p => p.fecha_entrega === tomorrow && p.estado !== "Cancelado"
+    )
+  }, [pedidos, tomorrow])
+
+  const reminderShown = useRef(false)
+  useEffect(() => {
+    if (!pedidosManana.length || reminderShown.current) return
+    const hour = new Date().getHours()
+    const isEvening = hour >= 18 && hour <= 23
+    if (!isEvening) return
+    const key = `reminder-${tomorrow}`
+    if (typeof window !== "undefined" && sessionStorage.getItem(key)) return
+    reminderShown.current = true
+    sessionStorage.setItem(key, "1")
+    toast.info("Recordatorio", {
+      description: `Tienes ${pedidosManana.length} entrega${pedidosManana.length !== 1 ? "s" : ""} mañana. ¡Prepárate!`,
+      duration: 8000,
+    })
+  }, [pedidosManana.length, tomorrow])
+
   const pedidosHoyList = useMemo(() => {
     if (!pedidos) return []
     return pedidos
@@ -143,12 +174,15 @@ export function DashboardView() {
         description="Vista general de tu florería"
         showLogo
         action={
-          <Button size="sm" asChild>
-            <Link href="/pedidos">
-              <Plus className="h-4 w-4 mr-1" />
-              Nuevo pedido
-            </Link>
-          </Button>
+          <div className="flex gap-2 items-center">
+            <EnablePush />
+            <Button size="sm" asChild>
+              <Link href="/pedidos">
+                <Plus className="h-4 w-4 mr-1" />
+                Nuevo pedido
+              </Link>
+            </Button>
+          </div>
         }
       />
       </div>
