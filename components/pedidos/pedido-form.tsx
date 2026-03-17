@@ -363,11 +363,8 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Addresses */}
-            <div className="space-y-3">
-              <div className="space-y-2">
+              <div className="space-y-2 col-span-2">
                 <Label htmlFor="direccion">Dirección del cliente</Label>
                 <Input
                   id="direccion"
@@ -376,8 +373,11 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
                   onChange={(e) => setDireccion(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="domicilio" className="font-semibold">Domicilio de entrega</Label>
+            </div>
+
+            {/* Domicilio de entrega */}
+            <div className="space-y-2">
+              <Label htmlFor="domicilio" className="font-semibold">Domicilio de entrega</Label>
                 <Input
                   id="domicilio"
                   placeholder="Donde se va a entregar"
@@ -385,7 +385,6 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
                   onChange={(e) => setDomicilio(e.target.value)}
                   className="font-medium"
                 />
-              </div>
             </div>
 
             {/* Delivery Date & Time */}

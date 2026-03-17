@@ -183,7 +183,7 @@ export function ListaEntregasDia() {
                   <td className="p-2 font-medium">{p.cliente}</td>
                   <td className="p-2">{p.telefono || "-"}</td>
                   <td className="p-2 max-w-[120px] truncate font-medium" title={p.domicilio || p.direccion || ""}>{p.domicilio || p.direccion || "-"}</td>
-                  <td className="p-2">{p.arreglos?.nombre || "-"}{p.arreglos?.codigo?.trim() ? <><br /><span className="font-bold text-xs">{p.arreglos.codigo.trim()}</span></> : null}</td>
+                  <td className="p-2">{p.arreglos?.nombre || "-"}{p.arreglos?.codigo?.trim() ? <><br /><span className="font-bold text-sm">{p.arreglos.codigo.trim()}</span></> : null}</td>
                   <td className="p-2 text-right">L{p.precio_total.toFixed(2)}</td>
                   <td className="p-2">
                     <span className={`px-2 py-0.5 rounded text-xs ${ESTADO_COLORS[p.estado]}`}>
