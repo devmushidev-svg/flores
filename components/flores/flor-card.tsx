@@ -35,12 +35,12 @@ export function FlorCard({ flor, onEdit, onDelete }: FlorCardProps) {
 
   return (
     <>
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.99]">
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-lg">🌸</span>
+              <div className="h-11 w-11 rounded-xl bg-gradient-primary flex items-center justify-center flex-shrink-0 text-white shadow-md">
+                <span className="text-xl">🌸</span>
               </div>
               <div className="min-w-0">
                 <h3 className="font-semibold text-foreground truncate">{flor.nombre}</h3>

@@ -26,7 +26,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { ArregloSelector } from "./arreglo-selector"
 import { createClient } from "@/lib/supabase/client"
 import type { Flor, ArregloWithFlores, Pedido, EstadoPedido, Cliente } from "@/lib/types"
-import { ESTADOS_PEDIDO } from "@/lib/types"
+import { ESTADOS_PEDIDO, METODO_PAGO_LABELS } from "@/lib/types"
 
 interface PedidoFormProps {
   open: boolean
@@ -45,6 +45,9 @@ interface PedidoFormProps {
     mensaje_tarjeta: string
     precio_total: number
     abono: number
+    pago_efectivo: number
+    pago_tarjeta: number
+    pago_transferencia: number
     estado: EstadoPedido
   }) => Promise<void>
   onArreglosChange: () => void
@@ -71,6 +74,9 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
   const [mensajeTarjeta, setMensajeTarjeta] = useState("")
   const [precioTotal, setPrecioTotal] = useState("")
   const [abono, setAbono] = useState("")
+  const [pagoEfectivo, setPagoEfectivo] = useState("")
+  const [pagoTarjeta, setPagoTarjeta] = useState("")
+  const [pagoTransferencia, setPagoTransferencia] = useState("")
   const [estado, setEstado] = useState<EstadoPedido>("Pendiente")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showArregloSelector, setShowArregloSelector] = useState(false)
@@ -98,6 +104,9 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     setMensajeTarjeta("")
     setPrecioTotal("")
     setAbono("")
+    setPagoEfectivo("")
+    setPagoTarjeta("")
+    setPagoTransferencia("")
     setEstado("Pendiente")
   }, [])
 
@@ -114,6 +123,9 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       setMensajeTarjeta(pedido.mensaje_tarjeta || "")
       setPrecioTotal(pedido.precio_total.toString())
       setAbono(pedido.abono.toString())
+      setPagoEfectivo((pedido.pago_efectivo ?? (pedido.abono > 0 ? pedido.abono : 0)).toString())
+      setPagoTarjeta((pedido.pago_tarjeta ?? 0).toString())
+      setPagoTransferencia((pedido.pago_transferencia ?? 0).toString())
       setEstado(pedido.estado)
     } else if (open && !pedido) {
       resetForm()
@@ -186,6 +198,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     if (!cliente.trim() || !fechaEntrega || !precioTotal) return
 
     setIsSubmitting(true)
+    const abonoVal = sumPagos || parseFloat(abono) || 0
     await onSubmit({
       cliente: cliente.trim(),
       telefono: telefono.trim(),
@@ -196,7 +209,10 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       descripcion: descripcion.trim(),
       mensaje_tarjeta: mensajeTarjeta.trim(),
       precio_total: parseFloat(precioTotal),
-      abono: parseFloat(abono) || 0,
+      abono: abonoVal,
+      pago_efectivo: parseFloat(pagoEfectivo) || 0,
+      pago_tarjeta: parseFloat(pagoTarjeta) || 0,
+      pago_transferencia: parseFloat(pagoTransferencia) || 0,
       estado
     })
     
@@ -208,7 +224,28 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     onOpenChange(false)
   }
 
-  const saldo = (parseFloat(precioTotal) || 0) - (parseFloat(abono) || 0)
+  const sumPagos = (parseFloat(pagoEfectivo) || 0) + (parseFloat(pagoTarjeta) || 0) + (parseFloat(pagoTransferencia) || 0)
+
+  // When abono changes and three fields don't match, pre-fill efectivo (valor se precargue si añadi fuera del formato)
+  useEffect(() => {
+    if (!open) return
+    const abonoVal = parseFloat(abono) || 0
+    if (abonoVal > 0 && Math.abs(sumPagos - abonoVal) > 0.01) {
+      setPagoEfectivo(abonoVal.toString())
+      setPagoTarjeta("")
+      setPagoTransferencia("")
+    }
+  }, [abono, open])
+
+  // Sync abono from the three payment fields when they change
+  useEffect(() => {
+    if (!open) return
+    if (sumPagos > 0 && Math.abs(sumPagos - (parseFloat(abono) || 0)) > 0.01) {
+      setAbono(sumPagos.toString())
+    }
+  }, [pagoEfectivo, pagoTarjeta, pagoTransferencia, open])
+
+  const saldo = (parseFloat(precioTotal) || 0) - (sumPagos || parseFloat(abono) || 0)
 
   return (
     <>
@@ -362,13 +399,13 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
               {selectedArreglo ? (
                 <Card className="border-primary/50">
                   <CardContent className="p-3 flex gap-3 items-center">
-                    <div className="w-14 h-14 rounded-lg bg-muted relative overflow-hidden flex-shrink-0">
+                    <div className="w-14 h-14 rounded-xl bg-muted relative overflow-hidden flex-shrink-0 shadow-md ring-1 ring-black/5">
                       {selectedArreglo.foto_url ? (
                         <Image
                           src={selectedArreglo.foto_url}
                           alt={selectedArreglo.nombre}
                           fill
-                          className="object-cover"
+                          className="object-cover rounded-xl"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -441,31 +478,71 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
 
             {/* Pricing */}
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="precio">Precio total (L) *</Label>
-                  <Input
-                    id="precio"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    value={precioTotal}
-                    onChange={(e) => setPrecioTotal(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="abono">Abono (L)</Label>
-                  <Input
-                    id="abono"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    value={abono}
-                    onChange={(e) => setAbono(e.target.value)}
-                  />
+              <div className="space-y-2">
+                <Label htmlFor="precio">Precio total (L) *</Label>
+                <Input
+                  id="precio"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={precioTotal}
+                  onChange={(e) => setPrecioTotal(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Abono / Forma de pago</Label>
+                <Input
+                  id="abono"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={abono}
+                  onChange={(e) => setAbono(e.target.value)}
+                  className="mb-2"
+                />
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="pago-efectivo" className="text-xs">{METODO_PAGO_LABELS.efectivo}</Label>
+                    <Input
+                      id="pago-efectivo"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0"
+                      value={pagoEfectivo}
+                      onChange={(e) => setPagoEfectivo(e.target.value)}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="pago-tarjeta" className="text-xs">{METODO_PAGO_LABELS.tarjeta}</Label>
+                    <Input
+                      id="pago-tarjeta"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0"
+                      value={pagoTarjeta}
+                      onChange={(e) => setPagoTarjeta(e.target.value)}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="pago-transferencia" className="text-xs">{METODO_PAGO_LABELS.transferencia}</Label>
+                    <Input
+                      id="pago-transferencia"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0"
+                      value={pagoTransferencia}
+                      onChange={(e) => setPagoTransferencia(e.target.value)}
+                      className="h-9 text-sm"
+                    />
+                  </div>
                 </div>
               </div>
               {precioTotal && (

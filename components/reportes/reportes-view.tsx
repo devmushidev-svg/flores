@@ -12,7 +12,9 @@ import {
   ChevronDown,
   Flower2,
   Users,
-  Truck
+  Truck,
+  Printer,
+  FileSpreadsheet
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -152,35 +154,89 @@ export function ReportesView() {
   return (
     <AppShell>
       <div className="flex flex-col gap-4 p-4 pb-24">
-        <div className="flex items-center justify-between">
-          <PageHeader 
-            title="Reportes" 
-            description="Análisis de ventas y pedidos"
-          />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <CalendarIcon className="h-4 w-4 mr-2" />
-                {periodLabels[period]}
-                <ChevronDown className="h-4 w-4 ml-2" />
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <PageHeader 
+              title="Reportes" 
+              description="Análisis de ventas y pedidos"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const headers = ["Cliente", "Fecha", "Arreglo", "Total", "Estado"]
+                  const rows = filteredPedidos.map((p) => [
+                    p.cliente,
+                    p.fecha_entrega,
+                    p.arreglos?.nombre || "",
+                    p.precio_total.toFixed(2),
+                    p.estado,
+                  ])
+                  const csv = [headers.join("\t"), ...rows.map((r) => r.join("\t"))].join("\n")
+                  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" })
+                  const a = document.createElement("a")
+                  a.href = URL.createObjectURL(blob)
+                  a.download = `reporte-${period}-${new Date().toISOString().split("T")[0]}.xls`
+                  a.click()
+                  URL.revokeObjectURL(a.href)
+                }}
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-1" />
+                Excel
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {(Object.keys(periodLabels) as PeriodType[]).map((p) => (
-                <DropdownMenuItem 
-                  key={p} 
-                  onClick={() => setPeriod(p)}
-                  className={period === p ? "bg-muted" : ""}
-                >
-                  {periodLabels[p]}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const w = window.open("", "_blank")
+                  if (!w) return
+                  w.document.write(`
+                    <!DOCTYPE html><html><head><title>Reporte ${periodLabels[period]}</title>
+                    <style>body{font-family:Arial;padding:20px;} table{width:100%;border-collapse:collapse;}
+                    th,td{border:1px solid #ddd;padding:8px;} th{background:#f5f5f5;}
+                    h1{text-align:center;}</style></head><body>
+                    <h1>Reporte - ${periodLabels[period]}</h1>
+                    <p>Generado: ${new Date().toLocaleString("es-HN")}</p>
+                    <table><tr><th>Cliente</th><th>Fecha</th><th>Arreglo</th><th>Total</th><th>Estado</th></tr>
+                    ${filteredPedidos.map((p) => `<tr><td>${p.cliente}</td><td>${p.fecha_entrega}</td><td>${p.arreglos?.nombre || ""}</td><td>L${p.precio_total.toFixed(2)}</td><td>${p.estado}</td></tr>`).join("")}
+                    </table>
+                    <p style="margin-top:20px;">Total: ${filteredPedidos.length} pedidos | Ingresos: L${stats.ingresos.toFixed(2)}</p>
+                    </body></html>`)
+                  w.document.close()
+                  w.print()
+                  w.close()
+                }}
+              >
+                <Printer className="h-4 w-4 mr-1" />
+                Imprimir
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    {periodLabels[period]}
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {(Object.keys(periodLabels) as PeriodType[]).map((p) => (
+                    <DropdownMenuItem 
+                      key={p} 
+                      onClick={() => setPeriod(p)}
+                      className={period === p ? "bg-muted" : ""}
+                    >
+                      {periodLabels[p]}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-12">
+          <div className="flex justify-center py-12 animate-fade-in">
             <Spinner className="h-8 w-8" />
           </div>
         ) : (

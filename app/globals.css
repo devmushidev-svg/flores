@@ -4,42 +4,54 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.98 0.01 350);
-  --foreground: oklch(0.25 0.02 350);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.25 0.02 350);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.25 0.02 350);
-  --primary: oklch(0.65 0.28 330);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.03 140);
-  --secondary-foreground: oklch(0.35 0.08 140);
-  --muted: oklch(0.95 0.02 350);
-  --muted-foreground: oklch(0.5 0.03 350);
-  --accent: oklch(0.92 0.04 350);
-  --accent-foreground: oklch(0.35 0.1 350);
+  --background: oklch(0.985 0.008 60);
+  --foreground: oklch(0.22 0.02 330);
+  --card: oklch(1 0.005 60);
+  --card-foreground: oklch(0.22 0.02 330);
+  --popover: oklch(1 0.005 60);
+  --popover-foreground: oklch(0.22 0.02 330);
+  --primary: oklch(0.72 0.18 350);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.95 0.04 160);
+  --secondary-foreground: oklch(0.3 0.08 160);
+  --muted: oklch(0.96 0.015 60);
+  --muted-foreground: oklch(0.48 0.03 330);
+  --accent: oklch(0.94 0.04 350);
+  --accent-foreground: oklch(0.35 0.12 350);
   --destructive: oklch(0.55 0.22 25);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.9 0.02 350);
-  --input: oklch(0.92 0.02 350);
-  --ring: oklch(0.65 0.28 330);
+  --border: oklch(0.92 0.02 60);
+  --input: oklch(0.94 0.02 60);
+  --ring: oklch(0.72 0.18 350);
   --chart-1: oklch(0.65 0.28 330);
-  --chart-2: oklch(0.6 0.15 140);
-  --chart-3: oklch(0.7 0.12 80);
+  --chart-2: oklch(0.6 0.18 160);
+  --chart-3: oklch(0.7 0.14 80);
   --chart-4: oklch(0.55 0.15 25);
   --chart-5: oklch(0.75 0.1 200);
-  --radius: 0.75rem;
-  --sidebar: oklch(0.98 0.01 350);
-  --sidebar-foreground: oklch(0.25 0.02 350);
-  --sidebar-primary: oklch(0.65 0.28 330);
+  --radius: 0.875rem;
+  --sidebar: oklch(0.98 0.01 60);
+  --sidebar-foreground: oklch(0.22 0.02 330);
+  --sidebar-primary: oklch(0.72 0.18 350);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.95 0.03 350);
-  --sidebar-accent-foreground: oklch(0.35 0.1 350);
-  --sidebar-border: oklch(0.9 0.02 350);
-  --sidebar-ring: oklch(0.65 0.28 330);
+  --sidebar-accent: oklch(0.95 0.04 160);
+  --sidebar-accent-foreground: oklch(0.35 0.08 160);
+  --sidebar-border: oklch(0.92 0.02 60);
+  --sidebar-ring: oklch(0.62 0.22 350);
+  /* Gradient tokens */
+  --gradient-primary: linear-gradient(135deg, oklch(0.78 0.14 350) 0%, oklch(0.72 0.16 355) 50%, oklch(0.68 0.14 340) 100%);
+  --gradient-mesh-1: radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.88 0.1 350 / 0.35), transparent);
+  --gradient-mesh-2: radial-gradient(ellipse 60% 40% at 100% 50%, oklch(0.9 0.06 340 / 0.25), transparent);
+  --gradient-mesh-3: radial-gradient(ellipse 50% 30% at 0% 80%, oklch(0.92 0.05 350 / 0.2), transparent);
+  --gradient-card: linear-gradient(135deg, oklch(1 0.005 60) 0%, oklch(0.99 0.01 40) 100%);
+  --gradient-glass: linear-gradient(135deg, oklch(1 0.01 60 / 0.9) 0%, oklch(0.98 0.02 350 / 0.85) 100%);
 }
 
 .dark {
+  --gradient-primary: linear-gradient(135deg, oklch(0.7 0.15 350) 0%, oklch(0.65 0.14 355) 100%);
+  --gradient-mesh-1: radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.35 0.08 350 / 0.25), transparent);
+  --gradient-mesh-2: radial-gradient(ellipse 60% 40% at 100% 50%, oklch(0.3 0.06 160 / 0.2), transparent);
+  --gradient-mesh-3: radial-gradient(ellipse 50% 30% at 0% 80%, oklch(0.4 0.05 330 / 0.15), transparent);
+  --gradient-card: linear-gradient(135deg, oklch(0.18 0.01 330) 0%, oklch(0.16 0.01 330) 100%);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.145 0 0);
@@ -75,8 +87,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: 'Geist', 'Geist Fallback', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -115,11 +127,125 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Custom animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Gradient utilities */
+.bg-gradient-mesh {
+  background: var(--gradient-mesh-1), var(--gradient-mesh-2), var(--gradient-mesh-3), var(--background);
+}
+
+.bg-gradient-primary {
+  background: var(--gradient-primary);
+}
+
+.bg-gradient-card {
+  background: var(--gradient-card);
+}
+
+.bg-gradient-glass {
+  background: var(--gradient-glass);
+}
+
+.text-gradient-primary {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animation utility classes */
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-delay-75 { animation-delay: 75ms; }
+.animate-delay-150 { animation-delay: 150ms; }
+.animate-delay-225 { animation-delay: 225ms; }
+.animate-delay-300 { animation-delay: 300ms; }
+.animate-delay-375 { animation-delay: 375ms; }
+.animate-delay-450 { animation-delay: 450ms; }
+
+/* Smooth transitions for interactive elements */
+.transition-smooth {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-bounce {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

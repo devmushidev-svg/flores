@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useEffect, useRef } from "react"
+import { toast } from "sonner"
 import useSWR from "swr"
 import Link from "next/link"
 import { ShoppingBag, Clock, CheckCircle, DollarSign, Plus, ChevronRight, Wallet, MapPin, Phone, MessageCircle, Send, Truck, Flower2, BookOpen } from "lucide-react"
@@ -16,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { PageHeader } from "@/components/page-header"
+import { EnablePush } from "@/components/notifications/enable-push"
 import { StatCard } from "./stat-card"
 import { createClient } from "@/lib/supabase/client"
 import type { Pedido } from "@/lib/types"
@@ -87,6 +89,35 @@ export function DashboardView() {
     }
   }, [pedidos, today])
 
+  const tomorrow = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    return d.toISOString().split("T")[0]
+  }, [])
+
+  const pedidosManana = useMemo(() => {
+    if (!pedidos) return []
+    return pedidos.filter(
+      p => p.fecha_entrega === tomorrow && p.estado !== "Cancelado"
+    )
+  }, [pedidos, tomorrow])
+
+  const reminderShown = useRef(false)
+  useEffect(() => {
+    if (!pedidosManana.length || reminderShown.current) return
+    const hour = new Date().getHours()
+    const isEvening = hour >= 18 && hour <= 23
+    if (!isEvening) return
+    const key = `reminder-${tomorrow}`
+    if (typeof window !== "undefined" && sessionStorage.getItem(key)) return
+    reminderShown.current = true
+    sessionStorage.setItem(key, "1")
+    toast.info("Recordatorio", {
+      description: `Tienes ${pedidosManana.length} entrega${pedidosManana.length !== 1 ? "s" : ""} mañana. ¡Prepárate!`,
+      duration: 8000,
+    })
+  }, [pedidosManana.length, tomorrow])
+
   const pedidosHoyList = useMemo(() => {
     if (!pedidos) return []
     return pedidos
@@ -137,55 +168,68 @@ export function DashboardView() {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
+      <div className="animate-fade-in-up opacity-0">
+        <PageHeader 
         title="Multiplanet" 
         description="Vista general de tu florería"
         showLogo
         action={
-          <Button size="sm" asChild>
-            <Link href="/pedidos">
-              <Plus className="h-4 w-4 mr-1" />
-              Nuevo pedido
-            </Link>
-          </Button>
+          <div className="flex gap-2 items-center">
+            <EnablePush />
+            <Button size="sm" asChild>
+              <Link href="/pedidos">
+                <Plus className="h-4 w-4 mr-1" />
+                Nuevo pedido
+              </Link>
+            </Button>
+          </div>
         }
       />
+      </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-12 animate-fade-in">
           <Spinner className="h-8 w-8 text-primary" />
         </div>
       ) : (
         <>
           {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-3">
-            <StatCard
-              title="Pedidos hoy"
-              value={stats.hoy}
-              icon={<ShoppingBag className="h-5 w-5" />}
-            />
-            <StatCard
-              title="Por entregar"
-              value={stats.pendientes}
-              icon={<Clock className="h-5 w-5" />}
-            />
-            <StatCard
-              title="Ingresos hoy"
-              value={`L${stats.ingresos.toFixed(0)}`}
-              icon={<DollarSign className="h-5 w-5" />}
-            />
-            <StatCard
-              title="Saldo por cobrar"
-              value={`L${stats.saldoPorCobrar.toFixed(0)}`}
-              icon={<Wallet className="h-5 w-5" />}
-              highlight={stats.saldoPorCobrar > 0}
-            />
+            <div className="animate-fade-in-up opacity-0" style={{ animationDelay: "50ms" }}>
+              <StatCard
+                title="Pedidos hoy"
+                value={stats.hoy}
+                icon={<ShoppingBag className="h-5 w-5" />}
+              />
+            </div>
+            <div className="animate-fade-in-up opacity-0" style={{ animationDelay: "100ms" }}>
+              <StatCard
+                title="Por entregar"
+                value={stats.pendientes}
+                icon={<Clock className="h-5 w-5" />}
+              />
+            </div>
+            <div className="animate-fade-in-up opacity-0" style={{ animationDelay: "150ms" }}>
+              <StatCard
+                title="Ingresos hoy"
+                value={`L${stats.ingresos.toFixed(0)}`}
+                icon={<DollarSign className="h-5 w-5" />}
+              />
+            </div>
+            <div className="animate-fade-in-up opacity-0" style={{ animationDelay: "200ms" }}>
+              <StatCard
+                title="Saldo por cobrar"
+                value={`L${stats.saldoPorCobrar.toFixed(0)}`}
+                icon={<Wallet className="h-5 w-5" />}
+                highlight={stats.saldoPorCobrar > 0}
+              />
+            </div>
           </div>
 
           {/* Progress Bar */}
           {stats.totalHoy > 0 && (
-            <Card>
-              <CardContent className="py-4">
+            <Card className="animate-fade-in-up opacity-0" style={{ animationDelay: "250ms" }}>
+              <CardContent className="py-5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Progreso del día</span>
                   <span className="text-sm text-muted-foreground">
@@ -198,10 +242,10 @@ export function DashboardView() {
           )}
 
           {/* Today's Orders List */}
-          <Card>
+          <Card className="animate-fade-in-up opacity-0" style={{ animationDelay: "300ms" }}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-primary" />
                   Entregas de hoy
                 </CardTitle>
@@ -216,10 +260,11 @@ export function DashboardView() {
             <CardContent className="pt-0">
               {pedidosHoyList.length > 0 ? (
                 <div className="space-y-3">
-                  {pedidosHoyList.map((pedido) => (
+                  {pedidosHoyList.map((pedido, idx) => (
                     <div 
                       key={pedido.id} 
-                      className="p-3 rounded-lg bg-muted/50 space-y-2"
+                      className="p-4 rounded-xl bg-white/70 dark:bg-white/5 border border-white/60 space-y-2 transition-all duration-200 hover:shadow-md hover:border-primary/20 active:scale-[0.99]"
+                      style={{ animation: "fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards", animationDelay: `${350 + idx * 50}ms`, opacity: 0 }}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
@@ -289,7 +334,7 @@ export function DashboardView() {
 
                       {/* Payment info */}
                       {pedido.saldo > 0 && (
-                        <div className="text-xs bg-amber-50 text-amber-700 rounded px-2 py-1 flex items-center justify-between">
+                        <div className="text-xs bg-gradient-to-r from-amber-50 to-amber-100/80 text-amber-800 rounded-lg px-3 py-2 flex items-center justify-between border border-amber-200/60">
                           <span>Abono: L{pedido.abono.toFixed(0)}</span>
                           <span className="font-semibold">Saldo: L{pedido.saldo.toFixed(0)}</span>
                         </div>
@@ -313,16 +358,20 @@ export function DashboardView() {
 
           {/* Quick Actions */}
           <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" className="h-auto py-4" asChild>
+            <Button variant="outline" className="h-auto py-5 animate-fade-in-up opacity-0 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30 hover:bg-primary/5 active:scale-[0.98] rounded-2xl border-2" style={{ animationDelay: "400ms" }} asChild>
               <Link href="/flores" className="flex flex-col items-center gap-2">
-                <Flower2 className="h-6 w-6 text-primary" />
-                <span className="text-sm">Gestionar flores</span>
+                <div className="h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center text-white shadow-md">
+                  <Flower2 className="h-6 w-6" />
+                </div>
+                <span className="text-sm font-semibold">Gestionar flores</span>
               </Link>
             </Button>
-            <Button variant="outline" className="h-auto py-4" asChild>
+            <Button variant="outline" className="h-auto py-5 animate-fade-in-up opacity-0 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30 hover:bg-primary/5 active:scale-[0.98] rounded-2xl border-2" style={{ animationDelay: "450ms" }} asChild>
               <Link href="/catalogo" className="flex flex-col items-center gap-2">
-                <BookOpen className="h-6 w-6 text-primary" />
-                <span className="text-sm">Ver catálogo</span>
+                <div className="h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center text-white shadow-md">
+                  <BookOpen className="h-6 w-6" />
+                </div>
+                <span className="text-sm font-semibold">Ver catálogo</span>
               </Link>
             </Button>
           </div>

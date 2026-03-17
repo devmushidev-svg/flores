@@ -14,13 +14,16 @@ export function PageHeader({ title, description, action, className, showLogo }: 
     <div className={cn("flex items-start justify-between gap-4", className)}>
       <div className="flex items-center gap-3">
         {showLogo && (
-          <Image
-            src="/logo.png"
-            alt="Multiplanet Floristería"
-            width={48}
-            height={48}
-            className="object-contain"
-          />
+          <div className="relative">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-primary opacity-20 blur-xl" />
+            <Image
+              src="/logo.png"
+              alt="Multiplanet Floristería"
+              width={48}
+              height={48}
+              className="relative object-contain rounded-xl transition-transform duration-300 hover:scale-105 ring-2 ring-white/50 shadow-lg"
+            />
+          </div>
         )}
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>

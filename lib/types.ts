@@ -15,15 +15,29 @@ export interface Flor {
   created_at: string
 }
 
+export interface Insumo {
+  id: string
+  nombre: string
+  precio_actual: number
+  unidad?: string
+  is_active: boolean
+  created_at: string
+}
+
 export interface Arreglo {
   id: string
+  codigo?: string | null
   nombre: string
   descripcion: string | null
   foto_url: string | null
   precio_real: number
+  categoria?: string | null
   is_active: boolean
   created_at: string
 }
+
+export const CATEGORIAS_ARREGLO = ["Ramo", "Centro de mesa", "Funeral", "Boda", "Aniversario", "Otro"] as const
+export type CategoriaArreglo = (typeof CATEGORIAS_ARREGLO)[number]
 
 export interface ArregloFlor {
   id: string
@@ -40,6 +54,16 @@ export interface ArregloWithFlores extends Arreglo {
   ganancia_estimada?: number
 }
 
+export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia'
+
+export const METODOS_PAGO: MetodoPago[] = ['efectivo', 'tarjeta', 'transferencia']
+
+export const METODO_PAGO_LABELS: Record<MetodoPago, string> = {
+  efectivo: 'Efectivo',
+  tarjeta: 'Tarjeta',
+  transferencia: 'Transferencia'
+}
+
 export interface Pedido {
   id: string
   numero_pedido: number
@@ -54,6 +78,9 @@ export interface Pedido {
   precio_total: number
   abono: number
   saldo: number
+  pago_efectivo?: number
+  pago_tarjeta?: number
+  pago_transferencia?: number
   estado: 'Pendiente' | 'En preparación' | 'En ruta' | 'Entregado' | 'Cancelado'
   created_at: string
   arreglos?: Arreglo

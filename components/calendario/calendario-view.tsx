@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react"
 import useSWR from "swr"
 import { Phone, MapPin, ChevronLeft, ChevronRight, X } from "lucide-react"
+import { ListaEntregasDia } from "@/components/pedidos/lista-entregas-dia"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -279,11 +280,14 @@ export function CalendarioView() {
       />
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-12 animate-fade-in">
           <Spinner className="h-8 w-8 text-primary" />
         </div>
       ) : (
         <>
+          {/* Lista de entregas del día (imprimir / Excel) */}
+          <ListaEntregasDia />
+
           {/* Monthly Calendar Grid */}
           <CalendarGrid
             currentMonth={currentMonth}

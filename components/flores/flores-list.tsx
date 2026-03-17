@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import useSWR from "swr"
 import { format, addDays } from "date-fns"
 import { es } from "date-fns/locale"
-import { Plus, Flower2, ClipboardList, Calendar as CalendarIcon, Package } from "lucide-react"
+import { Plus, Flower2, ClipboardList, Calendar as CalendarIcon, Package, Scissors } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { PageHeader } from "@/components/page-header"
@@ -14,8 +14,10 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { FlorCard } from "./flor-card"
 import { FlorForm } from "./flor-form"
+import { InsumoCard } from "./insumo-card"
+import { InsumoForm } from "./insumo-form"
 import { createClient } from "@/lib/supabase/client"
-import type { Flor } from "@/lib/types"
+import type { Flor, Insumo } from "@/lib/types"
 import type { DateRange } from "react-day-picker"
 
 async function fetchFlores(): Promise<Flor[]> {
@@ -25,8 +27,18 @@ async function fetchFlores(): Promise<Flor[]> {
     .select("*")
     .eq("is_active", true)
     .order("nombre")
-  
   if (error) throw error
+  return data || []
+}
+
+async function fetchInsumos(): Promise<Insumo[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("insumos")
+    .select("*")
+    .eq("is_active", true)
+    .order("nombre")
+  if (error) return []
   return data || []
 }
 
@@ -83,9 +95,12 @@ async function fetchArregloFlores(arregloIds: string[]): Promise<ArregloFloresDa
 
 export function FloresList() {
   const { data: flores, error, isLoading, mutate } = useSWR("flores", fetchFlores)
+  const { data: insumos = [], mutate: mutateInsumos } = useSWR("insumos", fetchInsumos)
   const [showForm, setShowForm] = useState(false)
   const [editingFlor, setEditingFlor] = useState<Flor | null>(null)
-  const [activeTab, setActiveTab] = useState<"inventario" | "insumos">("inventario")
+  const [showInsumoForm, setShowInsumoForm] = useState(false)
+  const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null)
+  const [activeTab, setActiveTab] = useState<"flores" | "insumos" | "proyeccion">("flores")
   
   // Date range picker state for Insumos
   const today = new Date()
@@ -99,7 +114,7 @@ export function FloresList() {
   const insumosDateTo = insumosDateRange?.to ? format(insumosDateRange.to, "yyyy-MM-dd") : insumosDateFrom
   
   const { data: insumosPedidos, isLoading: loadingInsumosPedidos } = useSWR(
-    activeTab === "insumos" ? `insumos-pedidos-${insumosDateFrom}-${insumosDateTo}` : null,
+    activeTab === "proyeccion" ? `insumos-pedidos-${insumosDateFrom}-${insumosDateTo}` : null,
     () => fetchPedidosByDateRange(insumosDateFrom, insumosDateTo)
   )
   
@@ -181,6 +196,29 @@ export function FloresList() {
     setEditingFlor(flor)
   }
 
+  const handleCreateInsumo = async (data: { nombre: string; precio_actual: number; unidad: string }) => {
+    const supabase = createClient()
+    const { error } = await supabase.from("insumos").insert([{ ...data, unidad: data.unidad || "unidad" }])
+    if (error) throw error
+    mutateInsumos()
+  }
+
+  const handleUpdateInsumo = async (data: { nombre: string; precio_actual: number; unidad: string }) => {
+    if (!editingInsumo) return
+    const supabase = createClient()
+    const { error } = await supabase.from("insumos").update(data).eq("id", editingInsumo.id)
+    if (error) throw error
+    setEditingInsumo(null)
+    mutateInsumos()
+  }
+
+  const handleDeleteInsumo = async (id: string) => {
+    const supabase = createClient()
+    const { error } = await supabase.from("insumos").update({ is_active: false }).eq("id", id)
+    if (error) throw error
+    mutateInsumos()
+  }
+
   if (error) {
     return (
       <div className="space-y-6">
@@ -195,24 +233,28 @@ export function FloresList() {
   return (
     <div className="space-y-4 p-4 pb-24">
       <PageHeader 
-        title="Flores" 
-        description="Gestiona tus flores y proyeccion de insumos"
+        title="Insumos" 
+        description="Flores, insumos y proyección para arreglos"
       />
       
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "inventario" | "insumos")}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="inventario" className="gap-2">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "flores" | "insumos" | "proyeccion")}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="flores" className="gap-2">
             <Flower2 className="h-4 w-4" />
-            Inventario
+            Flores
           </TabsTrigger>
           <TabsTrigger value="insumos" className="gap-2">
+            <Scissors className="h-4 w-4" />
+            Insumos
+          </TabsTrigger>
+          <TabsTrigger value="proyeccion" className="gap-2">
             <ClipboardList className="h-4 w-4" />
-            Proyeccion
+            Proyección
           </TabsTrigger>
         </TabsList>
         
-        {/* Inventario Tab */}
-        <TabsContent value="inventario" className="mt-4 space-y-4">
+        {/* Flores Tab */}
+        <TabsContent value="flores" className="mt-4 space-y-4">
           <div className="flex justify-end">
             <Button size="sm" onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4 mr-1" />
@@ -221,18 +263,23 @@ export function FloresList() {
           </div>
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-12 animate-fade-in">
               <Spinner className="h-8 w-8 text-primary" />
             </div>
           ) : flores && flores.length > 0 ? (
             <div className="space-y-3">
-              {flores.map((flor) => (
-                <FlorCard
+              {flores.map((flor, idx) => (
+                <div 
                   key={flor.id}
-                  flor={flor}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
+                  className="animate-fade-in-up opacity-0"
+                  style={{ animationDelay: `${idx * 50}ms` }}
+                >
+                  <FlorCard
+                    flor={flor}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                </div>
               ))}
             </div>
           ) : (
@@ -251,8 +298,17 @@ export function FloresList() {
           )}
         </TabsContent>
         
-        {/* Insumos/Proyeccion Tab */}
+        {/* Insumos Tab - placeholder por ahora, tabla insumos */}
         <TabsContent value="insumos" className="mt-4 space-y-4">
+          <div className="text-center py-12">
+            <Scissors className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground mb-2">Cintas, papel, envolturas y otros insumos</p>
+            <p className="text-sm text-muted-foreground">Próximamente: gestiona insumos y asígnalos a arreglos en el catálogo.</p>
+          </div>
+        </TabsContent>
+        
+        {/* Proyección Tab */}
+        <TabsContent value="proyeccion" className="mt-4 space-y-4">
           {/* Date Range Picker */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -396,6 +452,18 @@ export function FloresList() {
         onOpenChange={(open) => !open && setEditingFlor(null)}
         flor={editingFlor}
         onSubmit={handleUpdate}
+      />
+
+      <InsumoForm
+        open={showInsumoForm}
+        onOpenChange={setShowInsumoForm}
+        onSubmit={handleCreateInsumo}
+      />
+      <InsumoForm
+        open={!!editingInsumo}
+        onOpenChange={(open) => !open && setEditingInsumo(null)}
+        insumo={editingInsumo}
+        onSubmit={handleUpdateInsumo}
       />
     </div>
   )

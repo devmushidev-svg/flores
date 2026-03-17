@@ -2,12 +2,13 @@
 
 import { useState } from "react"
 import useSWR from "swr"
-import { Plus } from "lucide-react"
+import { Plus, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { PageHeader } from "@/components/page-header"
 import { ArregloCard } from "./arreglo-card"
 import { ArregloForm } from "./arreglo-form"
+import { CatalogoImport } from "./catalogo-import"
 import { createClient } from "@/lib/supabase/client"
 import type { Flor, ArregloWithFlores } from "@/lib/types"
 
@@ -52,13 +53,16 @@ export function CatalogoList() {
   const { data: arreglos, error: arreglosError, isLoading: arreglosLoading, mutate: mutateArreglos } = useSWR("arreglos", fetchArreglos)
   const { data: flores, isLoading: floresLoading } = useSWR("flores", fetchFlores)
   const [showForm, setShowForm] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [editingArreglo, setEditingArreglo] = useState<ArregloWithFlores | null>(null)
 
   const handleCreate = async (data: {
+    codigo?: string | null
     nombre: string
     descripcion: string
     foto_url: string | null
     precio_real: number
+    categoria?: string | null
     flores: FlorItem[]
   }) => {
     const supabase = createClient()
@@ -67,10 +71,12 @@ export function CatalogoList() {
     const { data: newArreglo, error: arregloError } = await supabase
       .from("arreglos")
       .insert([{
+        codigo: data.codigo || null,
         nombre: data.nombre,
         descripcion: data.descripcion,
         foto_url: data.foto_url,
-        precio_real: data.precio_real
+        precio_real: data.precio_real,
+        categoria: data.categoria || null,
       }])
       .select()
       .single()
@@ -96,10 +102,12 @@ export function CatalogoList() {
   }
 
   const handleUpdate = async (data: {
+    codigo?: string | null
     nombre: string
     descripcion: string
     foto_url: string | null
     precio_real: number
+    categoria?: string | null
     flores: FlorItem[]
   }) => {
     if (!editingArreglo) return
@@ -109,10 +117,12 @@ export function CatalogoList() {
     const { error: arregloError } = await supabase
       .from("arreglos")
       .update({
+        codigo: data.codigo || null,
         nombre: data.nombre,
         descripcion: data.descripcion,
         foto_url: data.foto_url,
-        precio_real: data.precio_real
+        precio_real: data.precio_real,
+        categoria: data.categoria || null,
       })
       .eq("id", editingArreglo.id)
     
@@ -156,6 +166,47 @@ export function CatalogoList() {
     setEditingArreglo(arreglo)
   }
 
+  const handleDuplicate = async (arreglo: ArregloWithFlores) => {
+    const supabase = createClient()
+    const { data: newArreglo, error: arregloError } = await supabase
+      .from("arreglos")
+      .insert([{
+        codigo: arreglo.codigo ? `${arreglo.codigo}-copia` : null,
+        nombre: `${arreglo.nombre} (copia)`,
+        descripcion: arreglo.descripcion,
+        foto_url: arreglo.foto_url,
+        precio_real: arreglo.precio_real,
+        categoria: arreglo.categoria || null,
+      }])
+      .select()
+      .single()
+    if (arregloError) {
+      alert("Error al duplicar: " + arregloError.message)
+      return
+    }
+    if (arreglo.arreglo_flores?.length && newArreglo) {
+      const floresData = arreglo.arreglo_flores.map((af) => ({
+        arreglo_id: newArreglo.id,
+        flor_id: af.flor_id,
+        cantidad: af.cantidad,
+      }))
+      await supabase.from("arreglo_flores").insert(floresData)
+    }
+    mutateArreglos()
+    const dupWithFlores: ArregloWithFlores = {
+      ...newArreglo,
+      arreglo_flores: (arreglo.arreglo_flores || []).map((af) => ({
+        ...af,
+        id: "",
+        arreglo_id: newArreglo.id,
+        created_at: "",
+        flores: af.flores,
+      })),
+    }
+    setEditingArreglo(dupWithFlores)
+    setShowForm(true)
+  }
+
   const isLoading = arreglosLoading || floresLoading
 
   if (arreglosError) {
@@ -175,26 +226,38 @@ export function CatalogoList() {
         title="Catálogo de Arreglos" 
         description="Crea y gestiona tus arreglos florales"
         action={
-          <Button size="sm" onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Nuevo
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setShowImport(true)}>
+              <Upload className="h-4 w-4 mr-1" />
+              Importar
+            </Button>
+            <Button size="sm" onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Nuevo
+            </Button>
+          </div>
         }
       />
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-12 animate-fade-in">
           <Spinner className="h-8 w-8 text-primary" />
         </div>
       ) : arreglos && arreglos.length > 0 ? (
         <div className="space-y-3">
-          {arreglos.map((arreglo) => (
-            <ArregloCard
+          {arreglos.map((arreglo, idx) => (
+            <div 
               key={arreglo.id}
-              arreglo={arreglo}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
+              className="animate-fade-in-up opacity-0"
+              style={{ animationDelay: `${idx * 50}ms` }}
+            >
+              <ArregloCard
+                arreglo={arreglo}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onDuplicate={handleDuplicate}
+              />
+            </div>
           ))}
         </div>
       ) : (
@@ -215,6 +278,12 @@ export function CatalogoList() {
         onOpenChange={setShowForm}
         flores={flores || []}
         onSubmit={handleCreate}
+      />
+
+      <CatalogoImport
+        open={showImport}
+        onOpenChange={setShowImport}
+        onSuccess={() => mutateArreglos()}
       />
 
       <ArregloForm

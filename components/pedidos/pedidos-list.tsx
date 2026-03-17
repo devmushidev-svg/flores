@@ -94,10 +94,19 @@ export function PedidosList() {
     mensaje_tarjeta: string
     precio_total: number
     abono: number
+    pago_efectivo?: number
+    pago_tarjeta?: number
+    pago_transferencia?: number
     estado: EstadoPedido
   }) => {
     const supabase = createClient()
-    const { error } = await supabase.from("pedidos").insert([data])
+    const insertData = {
+      ...data,
+      pago_efectivo: data.pago_efectivo ?? (data.abono > 0 ? data.abono : 0),
+      pago_tarjeta: data.pago_tarjeta ?? 0,
+      pago_transferencia: data.pago_transferencia ?? 0
+    }
+    const { error } = await supabase.from("pedidos").insert([insertData])
     if (error) throw error
     mutatePedidos()
   }
@@ -113,13 +122,22 @@ export function PedidosList() {
     mensaje_tarjeta: string
     precio_total: number
     abono: number
+    pago_efectivo?: number
+    pago_tarjeta?: number
+    pago_transferencia?: number
     estado: EstadoPedido
   }) => {
     if (!editingPedido) return
     const supabase = createClient()
+    const updateData = {
+      ...data,
+      pago_efectivo: data.pago_efectivo ?? (data.abono > 0 ? data.abono : 0),
+      pago_tarjeta: data.pago_tarjeta ?? 0,
+      pago_transferencia: data.pago_transferencia ?? 0
+    }
     const { error } = await supabase
       .from("pedidos")
-      .update(data)
+      .update(updateData)
       .eq("id", editingPedido.id)
     if (error) throw error
     setEditingPedido(null)
@@ -146,11 +164,17 @@ export function PedidosList() {
     mutatePedidos()
   }
 
-  const handlePaymentUpdate = async (id: string, nuevoAbono: number) => {
+  const handlePaymentUpdate = async (id: string, amount: number, metodoPago: 'efectivo' | 'tarjeta' | 'transferencia') => {
+    const pedido = pedidos?.find(p => p.id === id)
+    if (!pedido) return
+    const pagoEfectivo = (pedido.pago_efectivo ?? 0) + (metodoPago === 'efectivo' ? amount : 0)
+    const pagoTarjeta = (pedido.pago_tarjeta ?? 0) + (metodoPago === 'tarjeta' ? amount : 0)
+    const pagoTransferencia = (pedido.pago_transferencia ?? 0) + (metodoPago === 'transferencia' ? amount : 0)
+    const nuevoAbono = pagoEfectivo + pagoTarjeta + pagoTransferencia
     const supabase = createClient()
     const { error } = await supabase
       .from("pedidos")
-      .update({ abono: nuevoAbono })
+      .update({ abono: nuevoAbono, pago_efectivo: pagoEfectivo, pago_tarjeta: pagoTarjeta, pago_transferencia: pagoTransferencia })
       .eq("id", id)
     if (error) throw error
     mutatePedidos()
@@ -393,20 +417,25 @@ export function PedidosList() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-12 animate-fade-in">
           <Spinner className="h-8 w-8 text-primary" />
         </div>
       ) : filteredPedidos.length > 0 ? (
         <div className="space-y-3">
-          {filteredPedidos.map((pedido) => (
-            <PedidoCard
+          {filteredPedidos.map((pedido, idx) => (
+            <div 
               key={pedido.id}
+              className="animate-fade-in-up opacity-0"
+              style={{ animationDelay: `${idx * 50}ms` }}
+            >
+            <PedidoCard
               pedido={pedido}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onStatusChange={handleStatusChange}
               onPaymentUpdate={handlePaymentUpdate}
             />
+            </div>
           ))}
         </div>
       ) : (
