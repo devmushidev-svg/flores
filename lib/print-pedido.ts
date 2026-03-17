@@ -37,6 +37,7 @@ export function printPedidoTermica(pedido: Pedido) {
   const fechaEntrega = formatDateLong(pedido.fecha_entrega)
   const horaEntrega = formatTime(pedido.hora_entrega)
   const arregloNombre = pedido.arreglos?.nombre || "Arreglo personalizado"
+  const arregloCodigo = pedido.arreglos?.codigo?.trim() || null
   const arregloFoto = pedido.arreglos?.foto_url
   const logoUrl = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png"
 
@@ -97,6 +98,7 @@ export function printPedidoTermica(pedido: Pedido) {
     <div class="section">
       <div class="section-title">Arreglo</div>
       <div style="text-align:center;font-weight:900;margin:4px 0;">${arregloNombre}</div>
+      ${arregloCodigo ? `<div style="text-align:center;font-weight:900;margin:2px 0;font-size:13px;"><strong>${arregloCodigo}</strong></div>` : ""}
       ${arregloFoto ? `<div class="arreglo-img"><img src="${arregloFoto}" alt="${arregloNombre}" onerror="this.style.display='none'" /></div>` : ""}
       ${pedido.descripcion ? `<div style="border:2px solid #000;padding:4px;margin:4px 0;font-size:12px;"><strong>NOTA:</strong> ${pedido.descripcion}</div>` : ""}
       ${pedido.mensaje_tarjeta ? `<div style="border:2px dashed #000;padding:4px;margin:4px 0;font-size:12px;font-style:italic;"><strong>TARJETA:</strong> "${pedido.mensaje_tarjeta}"</div>` : ""}
@@ -120,6 +122,7 @@ export function printPedidoCarta(pedido: Pedido) {
   const fechaEntrega = formatDateLong(pedido.fecha_entrega)
   const horaEntrega = formatTime(pedido.hora_entrega)
   const arregloNombre = pedido.arreglos?.nombre || "Arreglo personalizado"
+  const arregloCodigo = pedido.arreglos?.codigo?.trim() || null
   const arregloFoto = pedido.arreglos?.foto_url
   const logoUrl = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png"
 
@@ -182,6 +185,7 @@ export function printPedidoCarta(pedido: Pedido) {
         <div class="section">
           <div class="section-title">Arreglo</div>
           <div class="row"><span class="label">${arregloNombre}</span></div>
+          ${arregloCodigo ? `<div style="margin-top:2px;font-weight:900;"><strong>${arregloCodigo}</strong></div>` : ""}
           ${pedido.descripcion ? `<p style="margin-top:4px;"><strong>Nota:</strong> ${pedido.descripcion}</p>` : ""}
           ${pedido.mensaje_tarjeta ? `<p style="margin-top:4px;font-style:italic;"><strong>Tarjeta:</strong> "${pedido.mensaje_tarjeta}"</p>` : ""}
         </div>
