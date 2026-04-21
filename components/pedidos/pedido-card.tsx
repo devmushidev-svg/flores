@@ -32,7 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { printPedidoTermica, printPedidoCarta } from "@/lib/print-pedido"
+import { printPedidoTermica, printPedidoCartaDuplicada } from "@/lib/print-pedido"
 import type { Pedido } from "@/lib/types"
 import { ESTADO_COLORS, METODO_PAGO_LABELS, type MetodoPago } from "@/lib/types"
 
@@ -42,7 +42,6 @@ interface PedidoCardProps {
   onDelete: (id: string) => Promise<void>
   onStatusChange?: (id: string, estado: Pedido['estado']) => Promise<void>
   onPaymentUpdate?: (id: string, amount: number, metodoPago: MetodoPago) => Promise<void>
-  onAddToPrintQueue?: (pedido: Pedido) => void
 }
 
 function formatDate(dateStr: string) {
@@ -86,7 +85,6 @@ export function PedidoCard({
   onDelete,
   onStatusChange,
   onPaymentUpdate,
-  onAddToPrintQueue,
 }: PedidoCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
@@ -145,7 +143,7 @@ export function PedidoCard({
   const isCancelledOrDelivered = pedido.estado === 'Cancelado' || pedido.estado === 'Entregado'
 
   const handlePrintReceipt = () => printPedidoTermica(pedido)
-  const handlePrintReceiptCarta = () => printPedidoCarta(pedido)
+  const handlePrintReceiptCarta = () => printPedidoCartaDuplicada(pedido)
 
   // WhatsApp message generators
   const handleChatCliente = () => {
@@ -380,13 +378,8 @@ export function PedidoCard({
                     Térmica (ticket)
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handlePrintReceiptCarta}>
-                    Carta (imagen grande)
+                    Carta x2
                   </DropdownMenuItem>
-                  {onAddToPrintQueue && (
-                    <DropdownMenuItem onClick={() => onAddToPrintQueue(pedido)}>
-                      Agregar a carta
-                    </DropdownMenuItem>
-                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
               {/* WhatsApp dropdown */}

@@ -452,3 +452,7 @@ export function printPedidosCartaCompacta(pedidos: Pedido[]) {
   doc.close()
   doPrint(iframe)
 }
+
+export function printPedidoCartaDuplicada(pedido: Pedido) {
+  printPedidosCartaCompacta([pedido, pedido])
+}
