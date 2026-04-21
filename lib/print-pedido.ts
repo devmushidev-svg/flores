@@ -33,6 +33,80 @@ function doPrint(iframe: HTMLIFrameElement) {
   setTimeout(run, 600)
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
+function renderCompactPedidoCard(pedido: Pedido) {
+  const fechaEntrega = formatDateLong(pedido.fecha_entrega)
+  const horaEntrega = formatTime(pedido.hora_entrega)
+  const arregloNombre = pedido.arreglos?.nombre || "Arreglo personalizado"
+  const arregloCodigo = pedido.arreglos?.codigo?.trim() || null
+  const arregloFoto = pedido.arreglos?.foto_url
+  const domicilio = pedido.domicilio || pedido.direccion || "Sin domicilio"
+  const direccionCliente = pedido.direccion || "Sin direccion"
+
+  return `
+    <article class="pedido-card">
+      <div class="pedido-header">
+        <div class="pedido-numero">Pedido N${pedido.numero_pedido}</div>
+        <div class="pedido-total">L${pedido.precio_total.toFixed(2)}</div>
+      </div>
+      <div class="pedido-body">
+        <div class="pedido-foto">
+          ${
+            arregloFoto
+              ? `<img src="${arregloFoto}" alt="${escapeHtml(arregloNombre)}" onerror="this.style.display='none'" />`
+              : `<div class="sin-foto">Sin foto</div>`
+          }
+        </div>
+        <div class="pedido-info">
+          <section class="pedido-section">
+            <div class="pedido-section-title">Cliente</div>
+            <div class="pedido-cliente">${escapeHtml(pedido.cliente)}</div>
+            ${pedido.telefono ? `<div class="pedido-meta"><strong>Telefono:</strong> ${escapeHtml(pedido.telefono)}</div>` : ""}
+            <div class="pedido-meta"><strong>Direccion:</strong> ${escapeHtml(direccionCliente)}</div>
+          </section>
+
+          <section class="pedido-section">
+            <div class="pedido-section-title">Entrega</div>
+            <div class="pedido-meta"><strong>Fecha:</strong> ${escapeHtml(fechaEntrega)}</div>
+            <div class="pedido-meta"><strong>Hora:</strong> ${escapeHtml(horaEntrega)}</div>
+            <div class="pedido-domicilio"><strong>DOMICILIO:</strong> ${escapeHtml(domicilio)}</div>
+          </section>
+
+          <section class="pedido-section">
+            <div class="pedido-section-title">Arreglo</div>
+            <div class="pedido-arreglo">${escapeHtml(arregloNombre)}</div>
+            ${arregloCodigo ? `<div class="pedido-codigo">${escapeHtml(arregloCodigo)}</div>` : ""}
+            ${pedido.descripcion ? `<div class="pedido-nota"><strong>Nota:</strong> ${escapeHtml(pedido.descripcion)}</div>` : ""}
+            ${pedido.mensaje_tarjeta ? `<div class="pedido-nota"><strong>Tarjeta:</strong> "${escapeHtml(pedido.mensaje_tarjeta)}"</div>` : ""}
+          </section>
+
+          <section class="pedido-totals">
+            <div class="pedido-section-title">Pago</div>
+            <div class="pedido-pago-row"><span>Efectivo:</span><span>L${(pedido.pago_efectivo ?? 0).toFixed(2)}</span></div>
+            <div class="pedido-pago-row"><span>Tarjeta:</span><span>L${(pedido.pago_tarjeta ?? 0).toFixed(2)}</span></div>
+            <div class="pedido-pago-row"><span>Transferencia:</span><span>L${(pedido.pago_transferencia ?? 0).toFixed(2)}</span></div>
+            <div class="pedido-pago-row"><span>Abonado:</span><span>L${pedido.abono.toFixed(2)}</span></div>
+            <div class="pedido-pago-row"><span>Saldo:</span><span>L${pedido.saldo.toFixed(2)}</span></div>
+            <div class="pedido-pago-total"><span>GRAN TOTAL:</span><span>L${pedido.precio_total.toFixed(2)}</span></div>
+          </section>
+
+          <div class="pedido-footer">
+            Impreso: ${escapeHtml(new Date().toLocaleString("es-HN", { dateStyle: "short", timeStyle: "short" }))}
+          </div>
+        </div>
+      </div>
+    </article>
+  `
+}
+
 export function printPedidoTermica(pedido: Pedido) {
   const fechaEntrega = formatDateLong(pedido.fecha_entrega)
   const horaEntrega = formatTime(pedido.hora_entrega)
@@ -204,6 +278,177 @@ export function printPedidoCarta(pedido: Pedido) {
     </div>
     <div class="footer">Gracias por su preferencia · Multiplanet Floristería<br><small>Impreso: ${new Date().toLocaleString("es-HN", { dateStyle: "short", timeStyle: "short" })}</small></div>
     </body></html>`)
+  doc.close()
+  doPrint(iframe)
+}
+
+export function printPedidosCartaCompacta(pedidos: Pedido[]) {
+  if (pedidos.length === 0) return
+
+  const iframe = document.createElement("iframe")
+  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:none"
+  document.body.appendChild(iframe)
+  const doc = iframe.contentWindow?.document
+  if (!doc) {
+    document.body.removeChild(iframe)
+    return
+  }
+
+  const pages: string[] = []
+  for (let index = 0; index < pedidos.length; index += 2) {
+    const pagePedidos = pedidos.slice(index, index + 2)
+    pages.push(`
+      <section class="print-page">
+        ${pagePedidos.map(renderCompactPedidoCard).join("")}
+      </section>
+    `)
+  }
+
+  doc.open()
+  doc.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Pedidos carta compacta</title>
+      <style>
+        @page { size: letter landscape; margin: 10mm; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { color: #111; }
+        .print-page {
+          width: 100%;
+          min-height: calc(100vh - 2mm);
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8mm;
+          page-break-after: always;
+          padding: 2mm 0;
+        }
+        .print-page:last-child { page-break-after: auto; }
+        .pedido-card {
+          border: 1px solid #222;
+          border-radius: 4mm;
+          padding: 4mm;
+          display: flex;
+          flex-direction: column;
+          min-height: 88mm;
+        }
+        .pedido-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 4mm;
+          border-bottom: 1px solid #444;
+          padding-bottom: 2.5mm;
+          margin-bottom: 3mm;
+        }
+        .pedido-numero {
+          font-size: 18px;
+          font-weight: 800;
+        }
+        .pedido-total {
+          font-size: 18px;
+          font-weight: 800;
+        }
+        .pedido-body {
+          display: grid;
+          grid-template-columns: 40mm 1fr;
+          gap: 4mm;
+          flex: 1;
+        }
+        .pedido-foto {
+          height: 52mm;
+          border: 1px solid #999;
+          border-radius: 3mm;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          background: #fff;
+        }
+        .pedido-foto img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+        .sin-foto {
+          color: #666;
+          font-size: 12px;
+        }
+        .pedido-info {
+          display: flex;
+          flex-direction: column;
+          gap: 1.6mm;
+          min-width: 0;
+        }
+        .pedido-section {
+          border-bottom: 1px dashed #bbb;
+          padding-bottom: 1.5mm;
+        }
+        .pedido-section-title {
+          font-size: 12px;
+          font-weight: 800;
+          margin-bottom: 0.8mm;
+        }
+        .pedido-cliente {
+          font-size: 15px;
+          font-weight: 800;
+        }
+        .pedido-arreglo {
+          font-size: 13px;
+          font-weight: 700;
+        }
+        .pedido-codigo {
+          font-size: 13px;
+          font-weight: 800;
+        }
+        .pedido-meta,
+        .pedido-nota {
+          font-size: 11px;
+          line-height: 1.22;
+        }
+        .pedido-domicilio {
+          font-size: 11px;
+          line-height: 1.2;
+          padding: 1.2mm 1.5mm;
+          border: 1px solid #555;
+          margin-top: 0.8mm;
+        }
+        .pedido-totals {
+          margin-top: auto;
+          border: 1px solid #333;
+          padding: 2mm;
+        }
+        .pedido-pago-row,
+        .pedido-pago-total {
+          display: flex;
+          justify-content: space-between;
+          gap: 3mm;
+          font-size: 11px;
+          line-height: 1.2;
+        }
+        .pedido-pago-row {
+          margin-top: 0.6mm;
+        }
+        .pedido-pago-total {
+          margin-top: 1.2mm;
+          padding-top: 1mm;
+          border-top: 1px solid #333;
+          font-weight: 700;
+        }
+        .pedido-footer {
+          font-size: 10px;
+          text-align: center;
+          padding-top: 1mm;
+        }
+      </style>
+    </head>
+    <body>
+      ${pages.join("")}
+    </body>
+    </html>
+  `)
   doc.close()
   doPrint(iframe)
 }

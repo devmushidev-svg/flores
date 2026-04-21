@@ -12,7 +12,9 @@ import { PageHeader } from "@/components/page-header"
 import { PedidoCard } from "./pedido-card"
 import { PedidoForm } from "./pedido-form"
 import { QuickOrderForm } from "./quick-order-form"
+import { PrintQueueDialog } from "./print-queue-dialog"
 import { createClient } from "@/lib/supabase/client"
+import { printPedidosCartaCompacta } from "@/lib/print-pedido"
 import type { Flor, ArregloWithFlores, Pedido, EstadoPedido } from "@/lib/types"
 import { ESTADOS_PEDIDO, ESTADO_COLORS } from "@/lib/types"
 
@@ -78,6 +80,8 @@ export function PedidosList() {
   })
   const [showCalendar, setShowCalendar] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(() => new Date())
+  const [printQueueIds, setPrintQueueIds] = useState<string[]>([])
+  const [showPrintQueue, setShowPrintQueue] = useState(false)
 
   const handleArreglosChange = () => {
     mutateArreglos()
@@ -207,6 +211,24 @@ export function PedidosList() {
     const matchesFecha = !filterFecha || p.fecha_entrega === filterFecha
     return matchesEstado && matchesFecha
   }) || []
+  const printQueuePedidos = (pedidos || []).filter((pedido) => printQueueIds.includes(pedido.id))
+
+  const handleAddToPrintQueue = (pedido: Pedido) => {
+    setPrintQueueIds((prev) => (prev.includes(pedido.id) ? prev : [...prev, pedido.id]))
+    setShowPrintQueue(true)
+  }
+
+  const handleRemoveFromPrintQueue = (id: string) => {
+    setPrintQueueIds((prev) => prev.filter((itemId) => itemId !== id))
+  }
+
+  const handleClearPrintQueue = () => {
+    setPrintQueueIds([])
+  }
+
+  const handlePrintQueue = () => {
+    printPedidosCartaCompacta(printQueuePedidos)
+  }
 
   const handleChangeMonth = (direction: "prev" | "next") => {
     setCurrentMonth(prev => {
@@ -436,6 +458,7 @@ export function PedidosList() {
               onDelete={handleDelete}
               onStatusChange={handleStatusChange}
               onPaymentUpdate={handlePaymentUpdate}
+              onAddToPrintQueue={handleAddToPrintQueue}
             />
             </div>
           ))}
@@ -465,6 +488,15 @@ export function PedidosList() {
         </div>
       )}
 
+      {printQueueIds.length > 0 && (
+        <Button
+          className="fixed bottom-24 right-4 z-50 shadow-lg rounded-full px-5"
+          onClick={() => setShowPrintQueue(true)}
+        >
+          Imprimir ({printQueueIds.length})
+        </Button>
+      )}
+
       <PedidoForm
         open={showForm}
         onOpenChange={setShowForm}
@@ -489,6 +521,15 @@ export function PedidosList() {
         onOpenChange={setShowQuickForm}
         arreglos={arreglos || []}
         onSubmit={handleCreate}
+      />
+
+      <PrintQueueDialog
+        open={showPrintQueue}
+        onOpenChange={setShowPrintQueue}
+        pedidos={printQueuePedidos}
+        onRemove={handleRemoveFromPrintQueue}
+        onClear={handleClearPrintQueue}
+        onPrint={handlePrintQueue}
       />
     </div>
   )

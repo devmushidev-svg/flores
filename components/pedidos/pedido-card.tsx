@@ -42,6 +42,7 @@ interface PedidoCardProps {
   onDelete: (id: string) => Promise<void>
   onStatusChange?: (id: string, estado: Pedido['estado']) => Promise<void>
   onPaymentUpdate?: (id: string, amount: number, metodoPago: MetodoPago) => Promise<void>
+  onAddToPrintQueue?: (pedido: Pedido) => void
 }
 
 function formatDate(dateStr: string) {
@@ -79,7 +80,14 @@ function createWhatsAppLink(telefono: string, message: string): string {
   return `https://wa.me/${phone}?text=${encodedMessage}`
 }
 
-export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPaymentUpdate }: PedidoCardProps) {
+export function PedidoCard({
+  pedido,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  onPaymentUpdate,
+  onAddToPrintQueue,
+}: PedidoCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
@@ -374,6 +382,11 @@ export function PedidoCard({ pedido, onEdit, onDelete, onStatusChange, onPayment
                   <DropdownMenuItem onClick={handlePrintReceiptCarta}>
                     Carta (imagen grande)
                   </DropdownMenuItem>
+                  {onAddToPrintQueue && (
+                    <DropdownMenuItem onClick={() => onAddToPrintQueue(pedido)}>
+                      Agregar a carta
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
               {/* WhatsApp dropdown */}

@@ -4,11 +4,11 @@
  */
 
 export async function pdfPagesToImages(file: File): Promise<File[]> {
-  const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist")
+  const pdfjs = await import("pdfjs-dist")
+  const { getDocument, GlobalWorkerOptions } = pdfjs
 
-  // Set worker for browser - use unpkg to serve from same version as package
   if (typeof window !== "undefined") {
-    GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@5.5.207/build/pdf.worker.mjs"
+    GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.mjs`
   }
 
   const arrayBuffer = await file.arrayBuffer()
@@ -26,6 +26,7 @@ export async function pdfPagesToImages(file: File): Promise<File[]> {
     const ctx = canvas.getContext("2d")
     if (!ctx) throw new Error("Could not get canvas context")
     const renderTask = page.render({
+      canvas,
       canvasContext: ctx,
       viewport,
       intent: "display",

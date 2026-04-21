@@ -5,7 +5,7 @@ import useSWR from "swr"
 import { Printer, FileSpreadsheet, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
-import { printPedidoTermica, printPedidoCarta } from "@/lib/print-pedido"
+import { printPedidoTermica, printPedidosCartaCompacta } from "@/lib/print-pedido"
 import type { Pedido } from "@/lib/types"
 import { ESTADO_COLORS } from "@/lib/types"
 
@@ -128,9 +128,7 @@ export function ListaEntregasDia() {
   if (isLoading) return null
 
   const handlePrintAllCarta = () => {
-    pedidos.forEach((p, i) => {
-      setTimeout(() => printPedidoCarta(p), i * 2500)
-    })
+    printPedidosCartaCompacta(pedidos)
   }
 
   const handlePrintAllTermica = () => {
@@ -152,7 +150,7 @@ export function ListaEntregasDia() {
             <FileSpreadsheet className="h-4 w-4 mr-1" />
             Excel
           </Button>
-          <Button variant="outline" size="sm" disabled={pedidos.length === 0} onClick={handlePrintAllCarta} title="Imprimir cada pedido en página carta (imagen grande)">
+          <Button variant="outline" size="sm" disabled={pedidos.length === 0} onClick={handlePrintAllCarta} title="Imprimir pedidos en carta compacta, 2 por pagina">
             <FileText className="h-4 w-4 mr-1" />
             Carta (todos)
           </Button>

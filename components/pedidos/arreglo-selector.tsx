@@ -53,9 +53,17 @@ export function ArregloSelector({
   }, [open])
 
   const filteredArreglos = useMemo(() => {
-    if (!searchQuery.trim()) return arreglos
+    const sorted = [...arreglos].sort((a, b) => {
+      const aCodigo = (a.codigo || "ZZZ").trim()
+      const bCodigo = (b.codigo || "ZZZ").trim()
+      return aCodigo.localeCompare(bCodigo, "es", { numeric: true, sensitivity: "base" })
+    })
+
+    if (!searchQuery.trim()) return sorted
+
     const query = searchQuery.toLowerCase()
-    return arreglos.filter(a => 
+    return sorted.filter((a) =>
+      (a.codigo || "").toLowerCase().includes(query) ||
       a.nombre.toLowerCase().includes(query) ||
       a.descripcion?.toLowerCase().includes(query)
     )
@@ -125,7 +133,7 @@ export function ArregloSelector({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar arreglos..."
+                placeholder="Buscar por codigo, nombre o descripcion..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
