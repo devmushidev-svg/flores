@@ -312,7 +312,7 @@ export function printPedidosCartaCompacta(pedidos: Pedido[]) {
       <meta charset="utf-8">
       <title>Pedidos carta compacta</title>
       <style>
-        @page { size: letter landscape; margin: 10mm; }
+        @page { size: letter landscape; margin: 6mm; }
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
         body { color: #111; }
@@ -321,9 +321,9 @@ export function printPedidosCartaCompacta(pedidos: Pedido[]) {
           min-height: calc(100vh - 2mm);
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 8mm;
+          gap: 5mm;
           page-break-after: always;
-          padding: 2mm 0;
+          padding: 1mm 0;
         }
         .print-page:last-child { page-break-after: auto; }
         .pedido-card {
@@ -353,12 +353,12 @@ export function printPedidosCartaCompacta(pedidos: Pedido[]) {
         }
         .pedido-body {
           display: grid;
-          grid-template-columns: 40mm 1fr;
-          gap: 4mm;
+          grid-template-columns: 46mm 1fr;
+          gap: 4.5mm;
           flex: 1;
         }
         .pedido-foto {
-          height: 52mm;
+          height: 60mm;
           border: 1px solid #999;
           border-radius: 3mm;
           display: flex;
@@ -379,68 +379,68 @@ export function printPedidosCartaCompacta(pedidos: Pedido[]) {
         .pedido-info {
           display: flex;
           flex-direction: column;
-          gap: 1.6mm;
+          gap: 2mm;
           min-width: 0;
         }
         .pedido-section {
           border-bottom: 1px dashed #bbb;
-          padding-bottom: 1.5mm;
+          padding-bottom: 1.8mm;
         }
         .pedido-section-title {
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 800;
-          margin-bottom: 0.8mm;
+          margin-bottom: 1mm;
         }
         .pedido-cliente {
-          font-size: 15px;
+          font-size: 18px;
           font-weight: 800;
         }
         .pedido-arreglo {
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 700;
         }
         .pedido-codigo {
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 800;
         }
         .pedido-meta,
         .pedido-nota {
-          font-size: 11px;
-          line-height: 1.22;
+          font-size: 12px;
+          line-height: 1.3;
         }
         .pedido-domicilio {
-          font-size: 11px;
-          line-height: 1.2;
-          padding: 1.2mm 1.5mm;
+          font-size: 12px;
+          line-height: 1.28;
+          padding: 1.6mm 2mm;
           border: 1px solid #555;
-          margin-top: 0.8mm;
+          margin-top: 1mm;
         }
         .pedido-totals {
           margin-top: auto;
           border: 1px solid #333;
-          padding: 2mm;
+          padding: 2.4mm;
         }
         .pedido-pago-row,
         .pedido-pago-total {
           display: flex;
           justify-content: space-between;
           gap: 3mm;
-          font-size: 11px;
-          line-height: 1.2;
+          font-size: 12px;
+          line-height: 1.28;
         }
         .pedido-pago-row {
-          margin-top: 0.6mm;
+          margin-top: 0.9mm;
         }
         .pedido-pago-total {
-          margin-top: 1.2mm;
-          padding-top: 1mm;
+          margin-top: 1.4mm;
+          padding-top: 1.2mm;
           border-top: 1px solid #333;
           font-weight: 700;
         }
         .pedido-footer {
-          font-size: 10px;
+          font-size: 11px;
           text-align: center;
-          padding-top: 1mm;
+          padding-top: 1.2mm;
         }
       </style>
     </head>
