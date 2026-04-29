@@ -241,32 +241,39 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     if (!cliente.trim() || !fechaEntrega || !precioTotal) return
 
     setIsSubmitting(true)
-    const abonoVal = sumPagos || parseFloat(abono) || 0
-    await onSubmit({
-      cliente: cliente.trim(),
-      telefono: telefono.trim(),
-      direccion: direccion.trim(),
-      domicilio: domicilio.trim() || direccion.trim(),
-      fecha_entrega: fechaEntrega,
-      hora_entrega: horaEntrega,
-      arreglo_id: selectedArreglo?.id || null,
-      foto_url: pedidoFotoUrl,
-      descripcion: descripcion.trim(),
-      mensaje_tarjeta: mensajeTarjeta.trim(),
-      precio_total: parseFloat(precioTotal),
-      abono: abonoVal,
-      pago_efectivo: parseFloat(pagoEfectivo) || 0,
-      pago_tarjeta: parseFloat(pagoTarjeta) || 0,
-      pago_transferencia: parseFloat(pagoTransferencia) || 0,
-      estado
-    })
-    
-    // Auto-save client info
-    await saveClient(cliente, telefono, direccion)
-    
-    setIsSubmitting(false)
-    resetForm()
-    onOpenChange(false)
+    try {
+      const abonoVal = sumPagos || parseFloat(abono) || 0
+      await onSubmit({
+        cliente: cliente.trim(),
+        telefono: telefono.trim(),
+        direccion: direccion.trim(),
+        domicilio: domicilio.trim() || direccion.trim(),
+        fecha_entrega: fechaEntrega,
+        hora_entrega: horaEntrega,
+        arreglo_id: selectedArreglo?.id || null,
+        foto_url: pedidoFotoUrl,
+        descripcion: descripcion.trim(),
+        mensaje_tarjeta: mensajeTarjeta.trim(),
+        precio_total: parseFloat(precioTotal),
+        abono: abonoVal,
+        pago_efectivo: parseFloat(pagoEfectivo) || 0,
+        pago_tarjeta: parseFloat(pagoTarjeta) || 0,
+        pago_transferencia: parseFloat(pagoTransferencia) || 0,
+        estado
+      })
+
+      // Auto-save client info
+      await saveClient(cliente, telefono, direccion)
+
+      resetForm()
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Error saving pedido:", error)
+      const errorMessage = error instanceof Error ? error.message : "No se pudo guardar el pedido"
+      alert(errorMessage)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const sumPagos = (parseFloat(pagoEfectivo) || 0) + (parseFloat(pagoTarjeta) || 0) + (parseFloat(pagoTransferencia) || 0)

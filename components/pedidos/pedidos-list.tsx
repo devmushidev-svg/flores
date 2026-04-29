@@ -63,6 +63,11 @@ async function fetchFlores(): Promise<Flor[]> {
   return data || []
 }
 
+function isMissingPedidoFotoColumn(error: { message?: string; details?: string; hint?: string } | null) {
+  const text = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`.toLowerCase()
+  return text.includes("foto_url") && (text.includes("column") || text.includes("schema"))
+}
+
 export function PedidosList() {
   const { data: pedidos, error: pedidosError, isLoading: pedidosLoading, mutate: mutatePedidos } = useSWR("pedidos", fetchPedidos)
   const { data: arreglos, isLoading: arreglosLoading, mutate: mutateArreglos } = useSWR("arreglos-with-flores", fetchArreglosWithFlores)
@@ -108,7 +113,18 @@ export function PedidosList() {
       pago_tarjeta: data.pago_tarjeta ?? 0,
       pago_transferencia: data.pago_transferencia ?? 0
     }
-    const { error } = await supabase.from("pedidos").insert([insertData])
+    let { error } = await supabase.from("pedidos").insert([insertData])
+
+    if (error && data.foto_url && isMissingPedidoFotoColumn(error)) {
+      const fallbackData = { ...insertData }
+      delete fallbackData.foto_url
+      const fallbackResult = await supabase.from("pedidos").insert([fallbackData])
+      error = fallbackResult.error
+      if (!error) {
+        alert("El pedido se guardó, pero la foto no se pudo guardar todavía porque la base de datos en producción aún no tiene ese campo.")
+      }
+    }
+
     if (error) throw error
     mutatePedidos()
   }
@@ -139,10 +155,24 @@ export function PedidosList() {
       pago_tarjeta: data.pago_tarjeta ?? 0,
       pago_transferencia: data.pago_transferencia ?? 0
     }
-    const { error } = await supabase
+    let { error } = await supabase
       .from("pedidos")
       .update(updateData)
       .eq("id", editingPedido.id)
+
+    if (error && data.foto_url && isMissingPedidoFotoColumn(error)) {
+      const fallbackData = { ...updateData }
+      delete fallbackData.foto_url
+      const fallbackResult = await supabase
+        .from("pedidos")
+        .update(fallbackData)
+        .eq("id", editingPedido.id)
+      error = fallbackResult.error
+      if (!error) {
+        alert("El pedido se actualizó, pero la foto no se pudo guardar todavía porque la base de datos en producción aún no tiene ese campo.")
+      }
+    }
+
     if (error) throw error
     setEditingPedido(null)
     mutatePedidos()
