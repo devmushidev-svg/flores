@@ -101,6 +101,21 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
 
   const isEditing = !!pedido
 
+  const parseMoneyValue = (value: string) => {
+    const normalized = value.trim().replace(",", ".")
+    if (!normalized) return 0
+    const parsed = Number(normalized)
+    return Number.isFinite(parsed) ? parsed : Number.NaN
+  }
+
+  const getErrorMessage = (error: unknown) => {
+    if (error instanceof Error && error.message) return error.message
+    if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
+      return error.message
+    }
+    return "No se pudo guardar el pedido"
+  }
+
   const resetForm = useCallback(() => {
     setCliente("")
     setTelefono("")
@@ -242,7 +257,21 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
 
     setIsSubmitting(true)
     try {
-      const abonoVal = sumPagos || parseFloat(abono) || 0
+      const precioTotalVal = parseMoneyValue(precioTotal)
+      const abonoIngresado = parseMoneyValue(abono)
+      const pagoEfectivoVal = parseMoneyValue(pagoEfectivo)
+      const pagoTarjetaVal = parseMoneyValue(pagoTarjeta)
+      const pagoTransferenciaVal = parseMoneyValue(pagoTransferencia)
+
+      if (!Number.isFinite(precioTotalVal) || precioTotalVal < 0) {
+        throw new Error("Revisa el precio total. Debe ser un número válido.")
+      }
+      if (![abonoIngresado, pagoEfectivoVal, pagoTarjetaVal, pagoTransferenciaVal].every((value) => Number.isFinite(value) && value >= 0)) {
+        throw new Error("Revisa los montos de pago. Deben ser números válidos.")
+      }
+
+      const abonoVal = sumPagos || abonoIngresado || 0
+
       await onSubmit({
         cliente: cliente.trim(),
         telefono: telefono.trim(),
@@ -254,11 +283,11 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
         foto_url: pedidoFotoUrl,
         descripcion: descripcion.trim(),
         mensaje_tarjeta: mensajeTarjeta.trim(),
-        precio_total: parseFloat(precioTotal),
+        precio_total: precioTotalVal,
         abono: abonoVal,
-        pago_efectivo: parseFloat(pagoEfectivo) || 0,
-        pago_tarjeta: parseFloat(pagoTarjeta) || 0,
-        pago_transferencia: parseFloat(pagoTransferencia) || 0,
+        pago_efectivo: pagoEfectivoVal || 0,
+        pago_tarjeta: pagoTarjetaVal || 0,
+        pago_transferencia: pagoTransferenciaVal || 0,
         estado
       })
 
@@ -269,19 +298,18 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       onOpenChange(false)
     } catch (error) {
       console.error("Error saving pedido:", error)
-      const errorMessage = error instanceof Error ? error.message : "No se pudo guardar el pedido"
-      alert(errorMessage)
+      alert(getErrorMessage(error))
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const sumPagos = (parseFloat(pagoEfectivo) || 0) + (parseFloat(pagoTarjeta) || 0) + (parseFloat(pagoTransferencia) || 0)
+  const sumPagos = (parseMoneyValue(pagoEfectivo) || 0) + (parseMoneyValue(pagoTarjeta) || 0) + (parseMoneyValue(pagoTransferencia) || 0)
 
   // When abono changes and three fields don't match, pre-fill efectivo (valor se precargue si añadi fuera del formato)
   useEffect(() => {
     if (!open) return
-    const abonoVal = parseFloat(abono) || 0
+    const abonoVal = parseMoneyValue(abono) || 0
     if (abonoVal > 0 && Math.abs(sumPagos - abonoVal) > 0.01) {
       setPagoEfectivo(abonoVal.toString())
       setPagoTarjeta("")
@@ -292,12 +320,12 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
   // Sync abono from the three payment fields when they change
   useEffect(() => {
     if (!open) return
-    if (sumPagos > 0 && Math.abs(sumPagos - (parseFloat(abono) || 0)) > 0.01) {
+    if (sumPagos > 0 && Math.abs(sumPagos - (parseMoneyValue(abono) || 0)) > 0.01) {
       setAbono(sumPagos.toString())
     }
   }, [pagoEfectivo, pagoTarjeta, pagoTransferencia, open])
 
-  const saldo = (parseFloat(precioTotal) || 0) - (sumPagos || parseFloat(abono) || 0)
+  const saldo = (parseMoneyValue(precioTotal) || 0) - (sumPagos || parseMoneyValue(abono) || 0)
 
   return (
     <>
