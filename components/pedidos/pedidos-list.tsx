@@ -13,7 +13,7 @@ import { PedidoCard } from "./pedido-card"
 import { PedidoForm } from "./pedido-form"
 import { QuickOrderForm } from "./quick-order-form"
 import { createClient } from "@/lib/supabase/client"
-import type { Flor, ArregloWithFlores, Pedido, EstadoPedido } from "@/lib/types"
+import type { Flor, Arreglo, ArregloWithFlores, Pedido, EstadoPedido } from "@/lib/types"
 import { ESTADOS_PEDIDO, ESTADO_COLORS } from "@/lib/types"
 
 async function fetchPedidos(): Promise<Pedido[]> {
@@ -63,9 +63,56 @@ async function fetchFlores(): Promise<Flor[]> {
   return data || []
 }
 
-function isMissingPedidoFotoColumn(error: { message?: string; details?: string; hint?: string } | null) {
-  const text = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`.toLowerCase()
-  return text.includes("foto_url") && (text.includes("column") || text.includes("schema"))
+async function createOneOffArreglo(params: {
+  cliente: string
+  fecha_entrega: string
+  precio_total: number
+  foto_url: string
+  descripcion: string
+}): Promise<Arreglo> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("arreglos")
+    .insert([{
+      nombre: `Pedido ${params.cliente} ${params.fecha_entrega}`,
+      descripcion: params.descripcion || "Arreglo temporal creado desde pedido",
+      foto_url: params.foto_url,
+      precio_real: params.precio_total,
+      is_active: false,
+    }])
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as Arreglo
+}
+
+async function updateOneOffArreglo(arregloId: string, params: {
+  precio_total: number
+  foto_url: string | null
+  descripcion: string
+}) {
+  const supabase = createClient()
+  const payload: {
+    precio_real: number
+    descripcion: string
+    foto_url?: string | null
+  } = {
+    precio_real: params.precio_total,
+    descripcion: params.descripcion || "Arreglo temporal creado desde pedido",
+  }
+
+  if (params.foto_url) {
+    payload.foto_url = params.foto_url
+  }
+
+  const { error } = await supabase
+    .from("arreglos")
+    .update(payload)
+    .eq("id", arregloId)
+    .eq("is_active", false)
+
+  if (error) throw error
 }
 
 export function PedidosList() {
@@ -107,25 +154,30 @@ export function PedidosList() {
     estado: EstadoPedido
   }) => {
     const supabase = createClient()
+    let arregloId = data.arreglo_id
+
+    if (!arregloId && data.foto_url) {
+      const oneOffArreglo = await createOneOffArreglo({
+        cliente: data.cliente,
+        fecha_entrega: data.fecha_entrega,
+        precio_total: data.precio_total,
+        foto_url: data.foto_url,
+        descripcion: data.descripcion,
+      })
+      arregloId = oneOffArreglo.id
+    }
+
     const insertData = {
       ...data,
+      arreglo_id: arregloId,
+      foto_url: null,
       pago_efectivo: data.pago_efectivo ?? (data.abono > 0 ? data.abono : 0),
       pago_tarjeta: data.pago_tarjeta ?? 0,
       pago_transferencia: data.pago_transferencia ?? 0
     }
-    let { error } = await supabase.from("pedidos").insert([insertData])
-
-    if (error && data.foto_url && isMissingPedidoFotoColumn(error)) {
-      const fallbackData = { ...insertData }
-      delete fallbackData.foto_url
-      const fallbackResult = await supabase.from("pedidos").insert([fallbackData])
-      error = fallbackResult.error
-      if (!error) {
-        alert("El pedido se guardó, pero la foto no se pudo guardar todavía porque la base de datos en producción aún no tiene ese campo.")
-      }
-    }
-
+    const { error } = await supabase.from("pedidos").insert([insertData])
     if (error) throw error
+    mutateArreglos()
     mutatePedidos()
   }
 
@@ -149,32 +201,52 @@ export function PedidosList() {
   }) => {
     if (!editingPedido) return
     const supabase = createClient()
+    let arregloId = data.arreglo_id
+    const hiddenArregloId = editingPedido.arreglo_id && editingPedido.arreglos && !editingPedido.arreglos.is_active
+      ? editingPedido.arreglo_id
+      : null
+
+    if (!arregloId && data.foto_url) {
+      if (hiddenArregloId) {
+        await updateOneOffArreglo(hiddenArregloId, {
+          precio_total: data.precio_total,
+          foto_url: data.foto_url,
+          descripcion: data.descripcion,
+        })
+        arregloId = hiddenArregloId
+      } else {
+        const oneOffArreglo = await createOneOffArreglo({
+          cliente: data.cliente,
+          fecha_entrega: data.fecha_entrega,
+          precio_total: data.precio_total,
+          foto_url: data.foto_url,
+          descripcion: data.descripcion,
+        })
+        arregloId = oneOffArreglo.id
+      }
+    } else if (hiddenArregloId && arregloId === hiddenArregloId) {
+      await updateOneOffArreglo(hiddenArregloId, {
+        precio_total: data.precio_total,
+        foto_url: data.foto_url,
+        descripcion: data.descripcion,
+      })
+    }
+
     const updateData = {
       ...data,
+      arreglo_id: arregloId,
+      foto_url: null,
       pago_efectivo: data.pago_efectivo ?? (data.abono > 0 ? data.abono : 0),
       pago_tarjeta: data.pago_tarjeta ?? 0,
       pago_transferencia: data.pago_transferencia ?? 0
     }
-    let { error } = await supabase
+    const { error } = await supabase
       .from("pedidos")
       .update(updateData)
       .eq("id", editingPedido.id)
-
-    if (error && data.foto_url && isMissingPedidoFotoColumn(error)) {
-      const fallbackData = { ...updateData }
-      delete fallbackData.foto_url
-      const fallbackResult = await supabase
-        .from("pedidos")
-        .update(fallbackData)
-        .eq("id", editingPedido.id)
-      error = fallbackResult.error
-      if (!error) {
-        alert("El pedido se actualizó, pero la foto no se pudo guardar todavía porque la base de datos en producción aún no tiene ese campo.")
-      }
-    }
-
     if (error) throw error
     setEditingPedido(null)
+    mutateArreglos()
     mutatePedidos()
   }
 

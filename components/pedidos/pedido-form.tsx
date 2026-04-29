@@ -146,9 +146,12 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       setDomicilio(pedido.domicilio || pedido.direccion || "")
       setFechaEntrega(pedido.fecha_entrega)
       setHoraEntrega(pedido.hora_entrega || "")
-      const arreglo = arreglos.find(a => a.id === pedido.arreglo_id) || null
+      const arreglo = arreglos.find(a => a.id === pedido.arreglo_id) || (pedido.arreglos ? {
+        ...pedido.arreglos,
+        arreglo_flores: []
+      } : null)
       setSelectedArreglo(arreglo)
-      setPedidoFotoUrl(pedido.foto_url || null)
+      setPedidoFotoUrl(pedido.foto_url || pedido.arreglos?.foto_url || null)
       setDescripcion(pedido.descripcion || "")
       setMensajeTarjeta(pedido.mensaje_tarjeta || "")
       setPrecioTotal(pedido.precio_total.toString())
@@ -164,9 +167,12 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
 
   useEffect(() => {
     if (!open || !pedido?.arreglo_id) return
-    const arreglo = arreglos.find(a => a.id === pedido.arreglo_id) || null
+    const arreglo = arreglos.find(a => a.id === pedido.arreglo_id) || (pedido.arreglos ? {
+      ...pedido.arreglos,
+      arreglo_flores: []
+    } : null)
     setSelectedArreglo(arreglo)
-  }, [arreglos, open, pedido?.arreglo_id])
+  }, [arreglos, open, pedido?.arreglo_id, pedido?.arreglos])
 
   // Filter clients based on input
   const filteredClients = clientes.filter(c => {
