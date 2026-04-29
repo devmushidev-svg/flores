@@ -44,12 +44,14 @@ interface PedidoCardProps {
   onPaymentUpdate?: (id: string, amount: number, metodoPago: MetodoPago) => Promise<void>
 }
 
-function formatDate(dateStr: string) {
+function formatDate(dateStr: string | null) {
+  if (!dateStr) return "Sin especificar"
   const date = new Date(dateStr + "T00:00:00")
   return date.toLocaleDateString("es-HN", { day: "numeric", month: "short" })
 }
 
-function formatDateLong(dateStr: string) {
+function formatDateLong(dateStr: string | null) {
+  if (!dateStr) return "Sin especificar"
   const date = new Date(dateStr + "T00:00:00")
   return date.toLocaleDateString("es-HN", { day: "numeric", month: "long" })
 }

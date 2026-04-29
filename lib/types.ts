@@ -71,7 +71,7 @@ export interface Pedido {
   telefono: string | null
   direccion: string | null  // Dirección del cliente
   domicilio: string | null  // Domicilio de entrega (donde se entrega)
-  fecha_entrega: string
+  fecha_entrega: string | null
   hora_entrega: string | null
   arreglo_id: string | null
   foto_url: string | null

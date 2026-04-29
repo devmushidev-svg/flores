@@ -47,7 +47,8 @@ function formatTime(timeStr: string | null) {
   return `${hour12}:${minutes} ${ampm}`
 }
 
-function formatDateLong(dateStr: string) {
+function formatDateLong(dateStr: string | null) {
+  if (!dateStr) return "sin fecha"
   const date = new Date(dateStr + "T00:00:00")
   return date.toLocaleDateString("es-HN", { day: "numeric", month: "long" })
 }

@@ -41,8 +41,8 @@ interface PedidoFormProps {
     telefono: string
     direccion: string
     domicilio: string
-    fecha_entrega: string
-    hora_entrega: string
+    fecha_entrega: string | null
+    hora_entrega: string | null
     arreglo_id: string | null
     foto_url: string | null
     descripcion: string
@@ -121,7 +121,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     setTelefono("")
     setDireccion("")
     setDomicilio("")
-    setFechaEntrega(new Date().toISOString().split("T")[0])
+    setFechaEntrega("")
     setHoraEntrega("")
     setSelectedArreglo(null)
     setPedidoFotoUrl(null)
@@ -144,7 +144,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       setTelefono(pedido.telefono || "")
       setDireccion(pedido.direccion || "")
       setDomicilio(pedido.domicilio || pedido.direccion || "")
-      setFechaEntrega(pedido.fecha_entrega)
+      setFechaEntrega(pedido.fecha_entrega || "")
       setHoraEntrega(pedido.hora_entrega || "")
       const arreglo = arreglos.find(a => a.id === pedido.arreglo_id) || null
       setSelectedArreglo(arreglo)
@@ -253,7 +253,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!cliente.trim() || !fechaEntrega || !precioTotal) return
+    if (!cliente.trim() || !precioTotal) return
 
     setIsSubmitting(true)
     try {
@@ -277,11 +277,11 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
         telefono: telefono.trim(),
         direccion: direccion.trim(),
         domicilio: domicilio.trim() || direccion.trim(),
-        fecha_entrega: fechaEntrega,
-        hora_entrega: horaEntrega,
+        fecha_entrega: fechaEntrega || null,
+        hora_entrega: horaEntrega || null,
         arreglo_id: selectedArreglo?.id || null,
         foto_url: pedidoFotoUrl,
-        descripcion: descripcion.trim(),
+        descripcion: descripcion.trim() || "Sin especificar",
         mensaje_tarjeta: mensajeTarjeta.trim(),
         precio_total: precioTotalVal,
         abono: abonoVal,
@@ -464,17 +464,26 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
             {/* Delivery Date & Time */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="fecha">Fecha de entrega *</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="fecha">Fecha de entrega</Label>
+                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setFechaEntrega("")}>
+                    Sin especificar
+                  </Button>
+                </div>
                 <Input
                   id="fecha"
                   type="date"
                   value={fechaEntrega}
                   onChange={(e) => setFechaEntrega(e.target.value)}
-                  required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="hora">Hora de entrega</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="hora">Hora de entrega</Label>
+                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setHoraEntrega("")}>
+                    Sin especificar
+                  </Button>
+                </div>
                 <Input
                   id="hora"
                   type="time"
@@ -733,7 +742,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
               <Button 
                 type="submit" 
                 className="flex-1"
-                disabled={isSubmitting || !cliente.trim() || !fechaEntrega || !precioTotal}
+                disabled={isSubmitting || !cliente.trim() || !precioTotal}
               >
                 {isSubmitting ? (
                   <>

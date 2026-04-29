@@ -39,7 +39,8 @@ function formatTime(timeStr: string | null) {
   return `${hour12}:${minutes} ${ampm}`
 }
 
-function formatDateLong(dateStr: string) {
+function formatDateLong(dateStr: string | null) {
+  if (!dateStr) return "Sin fecha"
   const date = new Date(dateStr + "T00:00:00")
   const today = new Date()
   const tomorrow = new Date(today)
@@ -215,6 +216,7 @@ export function CalendarioView() {
     
     return pedidos.reduce((counts, pedido) => {
       const date = pedido.fecha_entrega
+      if (!date) return counts
       counts[date] = (counts[date] || 0) + 1
       return counts
     }, {} as Record<string, number>)
@@ -230,13 +232,14 @@ export function CalendarioView() {
     
     // Show upcoming orders when no date is selected
     const today = new Date().toISOString().split("T")[0]
-    return pedidos.filter(p => p.fecha_entrega >= today)
+    return pedidos.filter(p => p.fecha_entrega && p.fecha_entrega >= today)
   }, [pedidos, selectedDate])
 
   // Group filtered pedidos by date
   const groupedPedidos = useMemo(() => {
     return filteredPedidos.reduce((groups, pedido) => {
       const date = pedido.fecha_entrega
+      if (!date) return groups
       if (!groups[date]) {
         groups[date] = []
       }

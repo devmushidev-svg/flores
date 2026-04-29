@@ -89,6 +89,7 @@ export function ReportesView() {
   // Filter pedidos by period (using fecha_entrega - delivery date)
   const filteredPedidos = useMemo(() => {
     return pedidos.filter(p => {
+      if (!p.fecha_entrega) return false
       // Parse fecha_entrega (format: YYYY-MM-DD)
       const fechaEntrega = parseISO(p.fecha_entrega)
       return isWithinInterval(fechaEntrega, { start: dateRange.start, end: dateRange.end })

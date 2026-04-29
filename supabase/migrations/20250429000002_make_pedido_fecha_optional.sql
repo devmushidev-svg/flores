@@ -1,0 +1,2 @@
+ALTER TABLE pedidos
+ALTER COLUMN fecha_entrega DROP NOT NULL;

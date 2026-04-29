@@ -4,7 +4,8 @@
 
 import type { Pedido } from "./types"
 
-function formatDateLong(dateStr: string) {
+function formatDateLong(dateStr: string | null) {
+  if (!dateStr) return "Sin especificar"
   const d = new Date(dateStr + "T00:00:00")
   return d.toLocaleDateString("es-HN", { day: "numeric", month: "long", year: "numeric" })
 }

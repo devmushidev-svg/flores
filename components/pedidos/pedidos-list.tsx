@@ -88,8 +88,8 @@ export function PedidosList() {
     telefono: string
     direccion: string
     domicilio: string
-    fecha_entrega: string
-    hora_entrega: string
+    fecha_entrega: string | null
+    hora_entrega: string | null
     arreglo_id: string | null
     foto_url: string | null
     descripcion: string
@@ -118,8 +118,8 @@ export function PedidosList() {
     telefono: string
     direccion: string
     domicilio: string
-    fecha_entrega: string
-    hora_entrega: string
+    fecha_entrega: string | null
+    hora_entrega: string | null
     arreglo_id: string | null
     foto_url: string | null
     descripcion: string
@@ -200,6 +200,7 @@ export function PedidosList() {
   // Count orders by date for calendar indicators
   const ordersByDate = pedidos?.reduce((counts, pedido) => {
     const date = pedido.fecha_entrega
+    if (!date) return counts
     counts[date] = (counts[date] || 0) + 1
     return counts
   }, {} as Record<string, number>) || {}

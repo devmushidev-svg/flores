@@ -27,8 +27,8 @@ interface QuickOrderFormProps {
     telefono: string
     direccion: string
     domicilio: string
-    fecha_entrega: string
-    hora_entrega: string
+    fecha_entrega: string | null
+    hora_entrega: string | null
     arreglo_id: string | null
     foto_url: string | null
     descripcion: string
@@ -58,7 +58,7 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
   const [cliente, setCliente] = useState("")
   const [direccion, setDireccion] = useState("")
   const [domicilio, setDomicilio] = useState("")
-  const [fechaEntrega, setFechaEntrega] = useState(new Date().toISOString().split("T")[0])
+  const [fechaEntrega, setFechaEntrega] = useState("")
   const [horaEntrega, setHoraEntrega] = useState("")
   const [selectedArreglo, setSelectedArreglo] = useState<ArregloWithFlores | null>(null)
   const [precioTotal, setPrecioTotal] = useState("")
@@ -82,7 +82,7 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
       setCliente("")
       setDireccion("")
       setDomicilio("")
-      setFechaEntrega(new Date().toISOString().split("T")[0])
+      setFechaEntrega("")
       setHoraEntrega("")
       setSelectedArreglo(null)
       setPrecioTotal("")
@@ -150,11 +150,11 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
       telefono: telefono.trim(),
       direccion: direccion.trim(),
       domicilio: domicilio.trim() || direccion.trim(),
-      fecha_entrega: fechaEntrega,
-      hora_entrega: horaEntrega,
+      fecha_entrega: fechaEntrega || null,
+      hora_entrega: horaEntrega || null,
       arreglo_id: selectedArreglo.id,
       foto_url: null,
-      descripcion: "",
+      descripcion: "Sin especificar",
       mensaje_tarjeta: "",
       precio_total: parseFloat(precioTotal),
       abono: abonoVal,
@@ -277,7 +277,12 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Fecha</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Fecha</Label>
+                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setFechaEntrega("")}>
+                    Sin especificar
+                  </Button>
+                </div>
                 <Input
                   type="date"
                   value={fechaEntrega}
@@ -285,7 +290,12 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
                 />
               </div>
               <div className="space-y-2">
-                <Label>Hora (opcional)</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Hora</Label>
+                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setHoraEntrega("")}>
+                    Sin especificar
+                  </Button>
+                </div>
                 <Input
                   type="time"
                   value={horaEntrega}
@@ -380,7 +390,7 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Entrega</span>
-                  <span>{fechaEntrega} {horaEntrega && `a las ${horaEntrega}`}</span>
+                  <span>{fechaEntrega || "Sin especificar"} {horaEntrega ? `a las ${horaEntrega}` : ""}</span>
                 </div>
                 <div className="flex items-center gap-3 pt-2 border-t">
                   <div className="w-12 h-12 rounded-xl bg-muted relative overflow-hidden flex-shrink-0 shadow-md ring-1 ring-black/5">
