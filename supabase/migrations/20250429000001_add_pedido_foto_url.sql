@@ -1,0 +1,2 @@
+ALTER TABLE pedidos
+ADD COLUMN IF NOT EXISTS foto_url TEXT;

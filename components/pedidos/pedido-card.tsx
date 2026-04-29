@@ -141,6 +141,8 @@ export function PedidoCard({
 
   const isPaid = pedido.saldo <= 0
   const isCancelledOrDelivered = pedido.estado === 'Cancelado' || pedido.estado === 'Entregado'
+  const fotoPedido = pedido.foto_url || pedido.arreglos?.foto_url || null
+  const nombreArreglo = pedido.arreglos?.nombre || "Pedido personalizado"
 
   const handlePrintReceipt = () => printPedidoTermica(pedido)
   const handlePrintReceiptCarta = () => printPedidoCartaDuplicada(pedido)
@@ -156,7 +158,7 @@ export function PedidoCard({
     if (!pedido.telefono) return
     const fechaEntrega = formatDateLong(pedido.fecha_entrega)
     const horaEntrega = pedido.hora_entrega ? ` a las ${formatTime(pedido.hora_entrega)}` : ""
-    const arregloNombre = pedido.arreglos?.nombre ? `\n\nArreglo: ${pedido.arreglos.nombre}` : ""
+    const arregloNombre = nombreArreglo ? `\n\nArreglo: ${nombreArreglo}` : ""
     const descripcionText = pedido.descripcion ? `\nNota: ${pedido.descripcion}` : ""
     const mensajeTarjeta = pedido.mensaje_tarjeta ? `\nMensaje de tarjeta: "${pedido.mensaje_tarjeta}"` : ""
     const direccionText = (pedido.domicilio || pedido.direccion) ? `\nDomicilio de entrega: ${pedido.domicilio || pedido.direccion}` : ""
@@ -169,7 +171,7 @@ export function PedidoCard({
   const handleAvisarEnRuta = () => {
     if (!pedido.telefono) return
     const direccionText = pedido.direccion ? ` hacia ${pedido.direccion}` : ""
-    const arregloNombre = pedido.arreglos?.nombre ? ` (${pedido.arreglos.nombre})` : ""
+    const arregloNombre = nombreArreglo ? ` (${nombreArreglo})` : ""
     const message = `¡Hola ${pedido.cliente}! Tu arreglo${arregloNombre} ya va en camino${direccionText}. 🛵💐`
     const url = createWhatsAppLink(pedido.telefono, message)
     window.open(url, "_blank")
@@ -229,11 +231,11 @@ export function PedidoCard({
 
           <div className="flex items-start gap-3">
             {/* Arrangement photo */}
-            {pedido.arreglos?.foto_url && (
+            {fotoPedido && (
               <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-muted shadow-md ring-1 ring-black/5">
                 <Image
-                  src={pedido.arreglos.foto_url}
-                  alt={pedido.arreglos.nombre || "Arreglo"}
+                  src={fotoPedido}
+                  alt={nombreArreglo}
                   width={64}
                   height={64}
                   className="w-full h-full object-cover rounded-xl"
@@ -242,9 +244,7 @@ export function PedidoCard({
             )}
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-foreground">{pedido.cliente}</h3>
-              {pedido.arreglos && (
-                <p className="text-sm text-primary font-medium">{pedido.arreglos.nombre}</p>
-              )}
+              <p className="text-sm text-primary font-medium">{nombreArreglo}</p>
             </div>
           </div>
 

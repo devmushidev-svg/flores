@@ -80,10 +80,12 @@ export function ArregloSelector({
   }
 
   const handleCreateArreglo = useCallback(async (data: {
+    codigo: string | null
     nombre: string
     descripcion: string
     foto_url: string | null
     precio_real: number
+    categoria: string | null
     flores: FlorItem[]
   }) => {
     const supabase = createClient()
@@ -92,10 +94,12 @@ export function ArregloSelector({
     const { data: newArreglo, error: arregloError } = await supabase
       .from("arreglos")
       .insert([{
+        codigo: data.codigo,
         nombre: data.nombre,
         descripcion: data.descripcion,
         foto_url: data.foto_url,
-        precio_real: data.precio_real
+        precio_real: data.precio_real,
+        categoria: data.categoria
       }])
       .select()
       .single()
@@ -117,8 +121,13 @@ export function ArregloSelector({
 
     // Refresh arreglos list
     onArreglosChange()
+    onSelect({
+      ...newArreglo,
+      arreglo_flores: []
+    })
+    onOpenChange(false)
     setShowCreateForm(false)
-  }, [onArreglosChange])
+  }, [onArreglosChange, onOpenChange, onSelect])
 
   return (
     <>

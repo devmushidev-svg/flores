@@ -74,6 +74,7 @@ export interface Pedido {
   fecha_entrega: string
   hora_entrega: string | null
   arreglo_id: string | null
+  foto_url: string | null
   descripcion: string | null
   mensaje_tarjeta: string | null
   precio_total: number

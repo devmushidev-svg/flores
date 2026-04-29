@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import Image from "next/image"
 import useSWR from "swr"
-import { ImageIcon, X, User, Check } from "lucide-react"
+import { ImageIcon, X, User, Check, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,6 +25,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { ArregloSelector } from "./arreglo-selector"
 import { createClient } from "@/lib/supabase/client"
+import { uploadToCloudinary } from "@/lib/cloudinary"
+import { isHeicFormat } from "@/lib/image-converter"
 import type { Flor, ArregloWithFlores, Pedido, EstadoPedido, Cliente } from "@/lib/types"
 import { ESTADOS_PEDIDO, METODO_PAGO_LABELS } from "@/lib/types"
 
@@ -42,6 +44,7 @@ interface PedidoFormProps {
     fecha_entrega: string
     hora_entrega: string
     arreglo_id: string | null
+    foto_url: string | null
     descripcion: string
     mensaje_tarjeta: string
     precio_total: number
@@ -72,6 +75,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
   const [fechaEntrega, setFechaEntrega] = useState("")
   const [horaEntrega, setHoraEntrega] = useState("")
   const [selectedArreglo, setSelectedArreglo] = useState<ArregloWithFlores | null>(null)
+  const [pedidoFotoUrl, setPedidoFotoUrl] = useState<string | null>(null)
   const [descripcion, setDescripcion] = useState("")
   const [mensajeTarjeta, setMensajeTarjeta] = useState("")
   const [precioTotal, setPrecioTotal] = useState("")
@@ -81,6 +85,8 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
   const [pagoTransferencia, setPagoTransferencia] = useState("")
   const [estado, setEstado] = useState<EstadoPedido>("Pendiente")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const [uploadPhotoStatus, setUploadPhotoStatus] = useState("")
   const [showArregloSelector, setShowArregloSelector] = useState(false)
   
   // Client autocomplete state
@@ -103,6 +109,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     setFechaEntrega(new Date().toISOString().split("T")[0])
     setHoraEntrega("")
     setSelectedArreglo(null)
+    setPedidoFotoUrl(null)
     setDescripcion("")
     setMensajeTarjeta("")
     setPrecioTotal("")
@@ -111,10 +118,13 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     setPagoTarjeta("")
     setPagoTransferencia("")
     setEstado("Pendiente")
+    setUploadPhotoStatus("")
   }, [])
 
   useEffect(() => {
-    if (open && pedido) {
+    if (!open) return
+
+    if (pedido) {
       setCliente(pedido.cliente)
       setTelefono(pedido.telefono || "")
       setDireccion(pedido.direccion || "")
@@ -123,6 +133,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       setHoraEntrega(pedido.hora_entrega || "")
       const arreglo = arreglos.find(a => a.id === pedido.arreglo_id) || null
       setSelectedArreglo(arreglo)
+      setPedidoFotoUrl(pedido.foto_url || null)
       setDescripcion(pedido.descripcion || "")
       setMensajeTarjeta(pedido.mensaje_tarjeta || "")
       setPrecioTotal(pedido.precio_total.toString())
@@ -131,10 +142,16 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       setPagoTarjeta((pedido.pago_tarjeta ?? 0).toString())
       setPagoTransferencia((pedido.pago_transferencia ?? 0).toString())
       setEstado(pedido.estado)
-    } else if (open && !pedido) {
+    } else {
       resetForm()
     }
-  }, [open, pedido, arreglos, resetForm])
+  }, [open, pedido?.id, resetForm])
+
+  useEffect(() => {
+    if (!open || !pedido?.arreglo_id) return
+    const arreglo = arreglos.find(a => a.id === pedido.arreglo_id) || null
+    setSelectedArreglo(arreglo)
+  }, [arreglos, open, pedido?.arreglo_id])
 
   // Filter clients based on input
   const filteredClients = clientes.filter(c => {
@@ -175,6 +192,27 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     setSelectedArreglo(null)
   }
 
+  const handlePedidoImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingPhoto(true)
+    try {
+      setUploadPhotoStatus(isHeicFormat(file) ? "Convirtiendo imagen..." : "Subiendo foto...")
+      const result = await uploadToCloudinary(file)
+      setPedidoFotoUrl(result.url)
+      setUploadPhotoStatus("")
+    } catch (error) {
+      console.error("Error uploading pedido image:", error)
+      const errorMessage = error instanceof Error ? error.message : "Error al subir la foto"
+      alert(errorMessage)
+      setUploadPhotoStatus("")
+    } finally {
+      setIsUploadingPhoto(false)
+      e.target.value = ""
+    }
+  }
+
   // Auto-save client after order submission
   const saveClient = async (nombre: string, tel: string, dir: string) => {
     if (!tel || tel.length < 8) return
@@ -212,6 +250,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       fecha_entrega: fechaEntrega,
       hora_entrega: horaEntrega,
       arreglo_id: selectedArreglo?.id || null,
+      foto_url: pedidoFotoUrl,
       descripcion: descripcion.trim(),
       mensaje_tarjeta: mensajeTarjeta.trim(),
       precio_total: parseFloat(precioTotal),
@@ -410,6 +449,62 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
               </div>
             </div>
 
+            {/* Custom order photo */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-16 rounded-xl bg-muted relative overflow-hidden flex-shrink-0 shadow-md ring-1 ring-black/5">
+                  {pedidoFotoUrl ? (
+                    <Image
+                      src={pedidoFotoUrl}
+                      alt="Foto del pedido"
+                      fill
+                      className="object-cover rounded-xl"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*,.heic,.heif"
+                      className="hidden"
+                      onChange={handlePedidoImageUpload}
+                      disabled={isUploadingPhoto}
+                    />
+                    <Button type="button" variant="outline" size="sm" disabled={isUploadingPhoto} asChild>
+                      <span>
+                        {isUploadingPhoto ? (
+                          <>
+                            <Spinner className="mr-2 h-4 w-4" />
+                            {uploadPhotoStatus || "Subiendo foto..."}
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="mr-2 h-4 w-4" />
+                            {pedidoFotoUrl ? "Cambiar foto" : "Subir foto"}
+                          </>
+                        )}
+                      </span>
+                    </Button>
+                  </label>
+                  {pedidoFotoUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPedidoFotoUrl(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Arrangement Selection */}
             <div className="space-y-2">
               <Label>Arreglo</Label>
@@ -464,7 +559,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
                   className="w-full h-16 border-dashed"
                   onClick={() => handleArregloSelectorOpen(true)}
                 >
-                  <span className="text-muted-foreground">Seleccionar del catálogo</span>
+                  <span className="text-muted-foreground">Seleccionar arreglo</span>
                 </Button>
               )}
             </div>

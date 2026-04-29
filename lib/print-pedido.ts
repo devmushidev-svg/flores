@@ -45,9 +45,9 @@ function escapeHtml(value: string) {
 function renderCompactPedidoCard(pedido: Pedido) {
   const fechaEntrega = formatDateLong(pedido.fecha_entrega)
   const horaEntrega = formatTime(pedido.hora_entrega)
-  const arregloNombre = pedido.arreglos?.nombre || "Arreglo personalizado"
+  const arregloNombre = pedido.arreglos?.nombre || "Pedido personalizado"
   const arregloCodigo = pedido.arreglos?.codigo?.trim() || null
-  const arregloFoto = pedido.arreglos?.foto_url
+  const arregloFoto = pedido.foto_url || pedido.arreglos?.foto_url
   const domicilio = pedido.domicilio || pedido.direccion || "Sin domicilio"
   const direccionCliente = pedido.direccion || "Sin direccion"
 
@@ -110,9 +110,9 @@ function renderCompactPedidoCard(pedido: Pedido) {
 export function printPedidoTermica(pedido: Pedido) {
   const fechaEntrega = formatDateLong(pedido.fecha_entrega)
   const horaEntrega = formatTime(pedido.hora_entrega)
-  const arregloNombre = pedido.arreglos?.nombre || "Arreglo personalizado"
+  const arregloNombre = pedido.arreglos?.nombre || "Pedido personalizado"
   const arregloCodigo = pedido.arreglos?.codigo?.trim() || null // Código del producto en negrita debajo del nombre
-  const arregloFoto = pedido.arreglos?.foto_url
+  const arregloFoto = pedido.foto_url || pedido.arreglos?.foto_url
   const logoUrl = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png"
 
   const iframe = document.createElement("iframe")
@@ -196,9 +196,9 @@ export function printPedidoTermica(pedido: Pedido) {
 export function printPedidoCarta(pedido: Pedido) {
   const fechaEntrega = formatDateLong(pedido.fecha_entrega)
   const horaEntrega = formatTime(pedido.hora_entrega)
-  const arregloNombre = pedido.arreglos?.nombre || "Arreglo personalizado"
+  const arregloNombre = pedido.arreglos?.nombre || "Pedido personalizado"
   const arregloCodigo = pedido.arreglos?.codigo?.trim() || null // Código del producto en negrita debajo del nombre
-  const arregloFoto = pedido.arreglos?.foto_url
+  const arregloFoto = pedido.foto_url || pedido.arreglos?.foto_url
   const logoUrl = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png"
 
   const iframe = document.createElement("iframe")

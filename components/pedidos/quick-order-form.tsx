@@ -30,6 +30,7 @@ interface QuickOrderFormProps {
     fecha_entrega: string
     hora_entrega: string
     arreglo_id: string | null
+    foto_url: string | null
     descripcion: string
     mensaje_tarjeta: string
     precio_total: number
@@ -152,6 +153,7 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
       fecha_entrega: fechaEntrega,
       hora_entrega: horaEntrega,
       arreglo_id: selectedArreglo.id,
+      foto_url: null,
       descripcion: "",
       mensaje_tarjeta: "",
       precio_total: parseFloat(precioTotal),

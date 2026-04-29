@@ -91,6 +91,7 @@ export function PedidosList() {
     fecha_entrega: string
     hora_entrega: string
     arreglo_id: string | null
+    foto_url: string | null
     descripcion: string
     mensaje_tarjeta: string
     precio_total: number
@@ -120,6 +121,7 @@ export function PedidosList() {
     fecha_entrega: string
     hora_entrega: string
     arreglo_id: string | null
+    foto_url: string | null
     descripcion: string
     mensaje_tarjeta: string
     precio_total: number
