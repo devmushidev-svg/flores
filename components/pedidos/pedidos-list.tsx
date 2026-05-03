@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import useSWR from "swr"
-import { Plus, Filter, Zap, Calendar, X, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Filter, Zap, Calendar, X, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/page-header"
 import { PedidoCard } from "./pedido-card"
@@ -78,6 +79,7 @@ export function PedidosList() {
   })
   const [showCalendar, setShowCalendar] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(() => new Date())
+  const [searchTerm, setSearchTerm] = useState("")
 
   const handleArreglosChange = () => {
     mutateArreglos()
@@ -102,8 +104,10 @@ export function PedidosList() {
     estado: EstadoPedido
   }) => {
     const supabase = createClient()
+    const today = new Date().toISOString().split("T")[0]
     const insertData = {
       ...data,
+      fecha_entrega: data.fecha_entrega || today,
       pago_efectivo: data.pago_efectivo ?? (data.abono > 0 ? data.abono : 0),
       pago_tarjeta: data.pago_tarjeta ?? 0,
       pago_transferencia: data.pago_transferencia ?? 0
@@ -133,8 +137,10 @@ export function PedidosList() {
   }) => {
     if (!editingPedido) return
     const supabase = createClient()
+    const today = new Date().toISOString().split("T")[0]
     const updateData = {
       ...data,
+      fecha_entrega: data.fecha_entrega || editingPedido.fecha_entrega || today,
       pago_efectivo: data.pago_efectivo ?? (data.abono > 0 ? data.abono : 0),
       pago_tarjeta: data.pago_tarjeta ?? 0,
       pago_transferencia: data.pago_transferencia ?? 0
@@ -205,10 +211,16 @@ export function PedidosList() {
     return counts
   }, {} as Record<string, number>) || {}
 
+  const normalizedSearch = useMemo(() => searchTerm.trim().toLowerCase(), [searchTerm])
   const filteredPedidos = pedidos?.filter(p => {
     const matchesEstado = filterEstado === "todos" || p.estado === filterEstado
     const matchesFecha = !filterFecha || p.fecha_entrega === filterFecha
-    return matchesEstado && matchesFecha
+    const matchesSearch =
+      !normalizedSearch ||
+      p.cliente.toLowerCase().includes(normalizedSearch) ||
+      p.telefono.toLowerCase().includes(normalizedSearch) ||
+      (p.arreglos?.nombre || "").toLowerCase().includes(normalizedSearch)
+    return matchesEstado && matchesFecha && matchesSearch
   }) || []
 
   const handleChangeMonth = (direction: "prev" | "next") => {
@@ -264,6 +276,15 @@ export function PedidosList() {
 
       {/* Filters Section */}
       <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Buscar por cliente, teléfono o arreglo..."
+            className="pl-9"
+          />
+        </div>
         {/* Date Filter Toggle */}
         <div className="flex items-center gap-2">
           <Button
