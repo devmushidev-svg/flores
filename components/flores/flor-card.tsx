@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { avisarError } from "@/lib/errores"
 import { Pencil, Trash2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -28,9 +29,14 @@ export function FlorCard({ flor, onEdit, onDelete }: FlorCardProps) {
 
   const handleDelete = async () => {
     setIsDeleting(true)
-    await onDelete(flor.id)
-    setIsDeleting(false)
-    setShowDeleteDialog(false)
+    try {
+      await onDelete(flor.id)
+      setShowDeleteDialog(false)
+    } catch (error) {
+      avisarError(error, "No se pudo eliminar")
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (

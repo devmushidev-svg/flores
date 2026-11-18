@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { avisarError } from "@/lib/errores"
 import { Pencil, Trash2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -28,9 +29,14 @@ export function InsumoCard({ insumo, onEdit, onDelete }: InsumoCardProps) {
 
   const handleDelete = async () => {
     setIsDeleting(true)
-    await onDelete(insumo.id)
-    setIsDeleting(false)
-    setShowDelete(false)
+    try {
+      await onDelete(insumo.id)
+      setShowDelete(false)
+    } catch (error) {
+      avisarError(error, "No se pudo eliminar")
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (

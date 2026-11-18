@@ -16,6 +16,9 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { createClient } from "@/lib/supabase/client"
+import { avisarError } from "@/lib/errores"
+import { miniatura } from "@/lib/imagenes"
+import { useDebounce } from "@/hooks/use-debounce"
 import type { ArregloWithFlores, Cliente } from "@/lib/types"
 
 interface QuickOrderFormProps {
@@ -42,14 +45,19 @@ interface QuickOrderFormProps {
   }) => Promise<void>
 }
 
-const fetchClientes = async () => {
+/** Busca clientes por teléfono en el servidor (máx. 8). */
+async function buscarClientesPorTelefono(termino: string): Promise<Cliente[]> {
+  const limpio = termino.replace(/[^0-9+\- ]/g, "").trim()
+  if (limpio.length < 2) return []
   const supabase = createClient()
   const { data, error } = await supabase
     .from("clientes")
     .select("*")
+    .ilike("telefono", `%${limpio}%`)
     .order("updated_at", { ascending: false })
+    .limit(8)
   if (error) throw error
-  return data as Cliente[]
+  return (data as Cliente[]) || []
 }
 
 export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: QuickOrderFormProps) {
@@ -69,9 +77,11 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
 
   const telefonoRef = useRef<HTMLInputElement>(null)
   
+  const telefonoDebounced = useDebounce(telefono.trim(), 250)
   const { data: clientes = [], mutate: mutateClientes } = useSWR(
-    open ? "quick-order-clientes" : null,
-    fetchClientes
+    open && telefonoDebounced.length >= 2 ? ["clientes-busqueda", "telefono", telefonoDebounced] : null,
+    () => buscarClientesPorTelefono(telefonoDebounced),
+    { keepPreviousData: true },
   )
 
   // Reset form when dialog opens
@@ -140,38 +150,61 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
     mutateClientes()
   }
 
+  const precioVal = parseFloat(precioTotal)
+  const abonoVal = parseFloat(abono) || 0
+  const abonoExcede = Number.isFinite(precioVal) && abonoVal > precioVal + 0.009
+
   const handleSubmit = async () => {
     if (!cliente.trim() || !selectedArreglo || !precioTotal) return
+    if (!Number.isFinite(precioVal) || precioVal < 0) {
+      avisarError(new Error("Revisa el precio. Debe ser un número válido."))
+      return
+    }
+    if (abonoVal < 0 || abonoExcede) {
+      avisarError(new Error(`El abono no puede ser mayor que el precio (L${precioVal.toFixed(2)}).`))
+      return
+    }
 
     setIsSubmitting(true)
-    const abonoVal = parseFloat(abono) || 0
-    await onSubmit({
-      cliente: cliente.trim(),
-      telefono: telefono.trim(),
-      direccion: direccion.trim(),
-      domicilio: domicilio.trim() || direccion.trim(),
-      fecha_entrega: fechaEntrega || null,
-      hora_entrega: horaEntrega || null,
-      arreglo_id: selectedArreglo.id,
-      foto_url: null,
-      descripcion: "Sin especificar",
-      mensaje_tarjeta: "",
-      precio_total: parseFloat(precioTotal),
-      abono: abonoVal,
-      pago_efectivo: abonoVal,
-      pago_tarjeta: 0,
-      pago_transferencia: 0,
-      estado: "Pendiente"
-    })
-    
-    await saveClient(cliente, telefono, direccion)
-    
+    try {
+      await onSubmit({
+        cliente: cliente.trim(),
+        telefono: telefono.trim(),
+        direccion: direccion.trim(),
+        domicilio: domicilio.trim() || direccion.trim(),
+        fecha_entrega: fechaEntrega || null,
+        hora_entrega: horaEntrega || null,
+        arreglo_id: selectedArreglo.id,
+        foto_url: null,
+        descripcion: "Sin especificar",
+        mensaje_tarjeta: "",
+        precio_total: precioVal,
+        abono: abonoVal,
+        pago_efectivo: abonoVal,
+        pago_tarjeta: 0,
+        pago_transferencia: 0,
+        estado: "Pendiente"
+      })
+    } catch (error) {
+      // El pedido NO se guardó: se mantiene el formulario para reintentar
+      avisarError(error, "No se pudo guardar el pedido")
+      setIsSubmitting(false)
+      return
+    }
+
+    try {
+      await saveClient(cliente, telefono, direccion)
+    } catch (error) {
+      // El pedido sí se guardó; sólo falló guardar el cliente para autocompletar
+      console.error("Error guardando cliente:", error)
+    }
+
     setIsSubmitting(false)
     onOpenChange(false)
   }
 
   const canProceedStep1 = cliente.trim() && telefono.trim()
-  const canSubmit = canProceedStep1 && selectedArreglo && precioTotal
+  const canSubmit = canProceedStep1 && selectedArreglo && precioTotal && !abonoExcede
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -339,7 +372,7 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
                     <div className="w-14 h-14 rounded-xl bg-muted relative overflow-hidden flex-shrink-0 shadow-md ring-1 ring-black/5">
                       {arreglo.foto_url ? (
                         <Image
-                          src={arreglo.foto_url}
+                          src={miniatura(arreglo.foto_url, 48) || arreglo.foto_url}
                           alt={arreglo.nombre}
                           fill
                           className="object-cover rounded-xl"
@@ -396,7 +429,7 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
                   <div className="w-12 h-12 rounded-xl bg-muted relative overflow-hidden flex-shrink-0 shadow-md ring-1 ring-black/5">
                     {selectedArreglo.foto_url ? (
                       <Image
-                        src={selectedArreglo.foto_url}
+                        src={miniatura(selectedArreglo.foto_url, 64) || selectedArreglo.foto_url}
                         alt={selectedArreglo.nombre}
                         fill
                         className="object-cover rounded-xl"
@@ -448,6 +481,11 @@ export function QuickOrderForm({ open, onOpenChange, arreglos, onSubmit }: Quick
                   L{((parseFloat(precioTotal) || 0) - (parseFloat(abono) || 0)).toFixed(2)}
                 </span>
               </div>
+            )}
+            {abonoExcede && (
+              <p className="text-sm font-medium text-red-600" role="alert">
+                El abono no puede ser mayor que el precio.
+              </p>
             )}
 
             {/* Actions */}

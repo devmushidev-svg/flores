@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { avisarError } from "@/lib/errores"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -42,13 +43,23 @@ export function FlorForm({ open, onOpenChange, flor, onSubmit }: FlorFormProps) 
     e.preventDefault()
     if (!nombre.trim() || !precio) return
 
+    const precioVal = parseFloat(precio)
+    if (!Number.isFinite(precioVal) || precioVal < 0) {
+      avisarError(new Error("El precio debe ser un número válido."))
+      return
+    }
     setIsSubmitting(true)
-    await onSubmit({
-      nombre: nombre.trim(),
-      precio_actual: parseFloat(precio)
-    })
-    setIsSubmitting(false)
-    onOpenChange(false)
+    try {
+      await onSubmit({
+        nombre: nombre.trim(),
+        precio_actual: precioVal
+      })
+      onOpenChange(false)
+    } catch (error) {
+      avisarError(error, "No se pudo guardar la flor")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleOpenChange = (newOpen: boolean) => {

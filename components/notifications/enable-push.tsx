@@ -19,8 +19,8 @@ export function EnablePush() {
   const handleEnable = async () => {
     if (!supported) return
     try {
-      const reg = await navigator.serviceWorker.register("/sw.js")
-      await reg.ready
+      await navigator.serviceWorker.register("/sw.js")
+      await navigator.serviceWorker.ready
       const perm = await Notification.requestPermission()
       setPermission(perm)
       if (perm === "granted") {
@@ -46,13 +46,18 @@ export function EnablePush() {
       size="sm"
       onClick={handleEnable}
       className="gap-2"
+      aria-label={permission === "denied" ? "Notificaciones bloqueadas" : "Habilitar notificaciones"}
+      title={permission === "denied" ? "Notificaciones bloqueadas" : "Habilitar notificaciones"}
     >
       {permission === "denied" ? (
         <BellOff className="h-4 w-4" />
       ) : (
         <Bell className="h-4 w-4" />
       )}
-      {permission === "denied" ? "Notificaciones bloqueadas" : "Habilitar notificaciones"}
+      {/* En teléfonos sólo el ícono, para que el encabezado quepa en pantallas pequeñas */}
+      <span className="hidden sm:inline">
+        {permission === "denied" ? "Notificaciones bloqueadas" : "Habilitar notificaciones"}
+      </span>
     </Button>
   )
 }

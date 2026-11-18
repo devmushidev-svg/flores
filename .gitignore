@@ -16,3 +16,7 @@ node_modules/
 .next/
 .DS_Store
 .vercel
+
+# Playwright
+/e2e-results/
+/playwright-report/

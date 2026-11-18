@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { avisarError } from "@/lib/errores"
 import Image from "next/image"
 import { Plus, X, Upload, ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -138,9 +139,7 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
       setFotoUrl(result.url)
       setUploadStatus("")
     } catch (error) {
-      console.error("Error uploading image:", error)
-      const errorMessage = error instanceof Error ? error.message : "Error al subir la imagen"
-      alert(errorMessage)
+      avisarError(error, "Error al subir la imagen")
       setUploadStatus("")
     } finally {
       setIsUploading(false)
@@ -151,22 +150,33 @@ export function ArregloForm({ open, onOpenChange, arreglo, flores, onSubmit }: A
     e.preventDefault()
     if (!nombre.trim() || !precioReal) return
 
+    const precioVal = parseFloat(precioReal)
+    if (!Number.isFinite(precioVal) || precioVal < 0) {
+      avisarError(new Error("El precio debe ser un número válido."))
+      return
+    }
     setIsSubmitting(true)
     const codigoVal = codigo.trim() || null
-    await onSubmit({
-      codigo: codigoVal,
-      categoria: categoria.trim() || null,
-      nombre: nombre.trim(),
-      descripcion: descripcion.trim(),
-      foto_url: fotoUrl,
-      precio_real: parseFloat(precioReal),
-      flores: floresSeleccionadas
-        .filter(f => f.flor_id)
-        .map(f => ({ ...f, cantidad: Math.max(1, f.cantidad || 1) }))
-    })
-    setIsSubmitting(false)
-    resetForm()
-    onOpenChange(false)
+    try {
+      await onSubmit({
+        codigo: codigoVal,
+        categoria: categoria.trim() || null,
+        nombre: nombre.trim(),
+        descripcion: descripcion.trim(),
+        foto_url: fotoUrl,
+        precio_real: precioVal,
+        flores: floresSeleccionadas
+          .filter(f => f.flor_id)
+          .map(f => ({ ...f, cantidad: Math.max(1, f.cantidad || 1) }))
+      })
+      resetForm()
+      onOpenChange(false)
+    } catch (error) {
+      // El formulario queda abierto con los datos para corregir (p. ej. código repetido)
+      avisarError(error, "No se pudo guardar el arreglo")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (

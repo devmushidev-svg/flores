@@ -32,6 +32,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { avisarError } from "@/lib/errores"
+import { miniatura } from "@/lib/imagenes"
 import { printPedidoTermica, printPedidoCartaDuplicada } from "@/lib/print-pedido"
 import type { Pedido } from "@/lib/types"
 import { ESTADO_COLORS, METODO_PAGO_LABELS, type MetodoPago } from "@/lib/types"
@@ -100,35 +102,56 @@ export function PedidoCard({
   const handleStatusChange = async (newStatus: Pedido['estado']) => {
     if (!onStatusChange || newStatus === pedido.estado) return
     setIsChangingStatus(true)
-    await onStatusChange(pedido.id, newStatus)
-    setIsChangingStatus(false)
+    try {
+      await onStatusChange(pedido.id, newStatus)
+    } catch (error) {
+      avisarError(error, "No se pudo cambiar el estado")
+    } finally {
+      setIsChangingStatus(false)
+    }
   }
 
   const handleDelete = async () => {
     setIsDeleting(true)
-    await onDelete(pedido.id)
-    setIsDeleting(false)
-    setShowDeleteDialog(false)
+    try {
+      await onDelete(pedido.id)
+      setShowDeleteDialog(false)
+    } catch (error) {
+      avisarError(error, "No se pudo eliminar el pedido")
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const handleQuickCancel = async () => {
     if (!onStatusChange) return
     setIsChangingStatus(true)
-    await onStatusChange(pedido.id, 'Cancelado')
-    setIsChangingStatus(false)
-    setShowCancelDialog(false)
+    try {
+      await onStatusChange(pedido.id, 'Cancelado')
+      setShowCancelDialog(false)
+    } catch (error) {
+      avisarError(error, "No se pudo cancelar el pedido")
+    } finally {
+      setIsChangingStatus(false)
+    }
   }
 
+  const paymentValue = parseFloat(paymentAmount.replace(",", "."))
+  const paymentExceedsBalance = Number.isFinite(paymentValue) && paymentValue > pedido.saldo + 0.009
+  const paymentInvalid = !Number.isFinite(paymentValue) || paymentValue <= 0 || paymentExceedsBalance
+
   const handlePaymentSubmit = async () => {
-    if (!onPaymentUpdate) return
-    const amount = parseFloat(paymentAmount)
-    if (isNaN(amount) || amount <= 0) return
-    
+    if (!onPaymentUpdate || paymentInvalid) return
     setIsProcessingPayment(true)
-    await onPaymentUpdate(pedido.id, amount, paymentMethod)
-    setIsProcessingPayment(false)
-    setShowPaymentDialog(false)
-    setPaymentAmount("")
+    try {
+      await onPaymentUpdate(pedido.id, paymentValue, paymentMethod)
+      setShowPaymentDialog(false)
+      setPaymentAmount("")
+    } catch (error) {
+      avisarError(error, "No se pudo registrar el abono")
+    } finally {
+      setIsProcessingPayment(false)
+    }
   }
 
   const handlePayFullBalance = () => {
@@ -236,7 +259,7 @@ export function PedidoCard({
             {fotoPedido && (
               <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-muted shadow-md ring-1 ring-black/5">
                 <Image
-                  src={fotoPedido}
+                  src={miniatura(fotoPedido, 64) || fotoPedido}
                   alt={nombreArreglo}
                   width={64}
                   height={64}
@@ -584,12 +607,17 @@ export function PedidoCard({
             </div>
 
             {/* Preview new balance */}
-            {paymentAmount && parseFloat(paymentAmount) > 0 && (
+            {paymentExceedsBalance && (
+              <p className="text-sm font-medium text-red-600" role="alert">
+                El abono no puede ser mayor que el saldo pendiente (L{pedido.saldo.toFixed(2)}).
+              </p>
+            )}
+            {!paymentInvalid && (
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-emerald-700">Nuevo saldo después del abono:</span>
                   <span className="font-bold text-emerald-700">
-                    L{Math.max(0, pedido.saldo - parseFloat(paymentAmount)).toFixed(2)}
+                    L{Math.max(0, pedido.saldo - paymentValue).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -606,7 +634,7 @@ export function PedidoCard({
             </Button>
             <Button
               onClick={handlePaymentSubmit}
-              disabled={isProcessingPayment || !paymentAmount || parseFloat(paymentAmount) <= 0}
+              disabled={isProcessingPayment || paymentInvalid}
               className="bg-emerald-600 hover:bg-emerald-700"
             >
               {isProcessingPayment ? "Procesando..." : "Registrar Abono"}
