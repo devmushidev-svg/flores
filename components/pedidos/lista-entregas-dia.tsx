@@ -5,16 +5,18 @@ import useSWR from "swr"
 import { Printer, FileSpreadsheet, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
+import { hoyISO } from "@/lib/fechas"
+import { PEDIDO_SELECT } from "@/lib/pedidos-data"
 import { printPedidoTermica, printPedidosCartaCompacta } from "@/lib/print-pedido"
 import type { Pedido } from "@/lib/types"
 import { ESTADO_COLORS } from "@/lib/types"
 
 async function fetchPedidosHoy(): Promise<Pedido[]> {
-  const today = new Date().toISOString().split("T")[0]
+  const today = hoyISO()
   const supabase = createClient()
   const { data, error } = await supabase
     .from("pedidos")
-    .select("*, arreglos(*)")
+    .select(PEDIDO_SELECT)
     .eq("fecha_entrega", today)
     .neq("estado", "Cancelado")
     .order("hora_entrega", { ascending: true })
@@ -37,7 +39,7 @@ function formatDateLong(dateStr: string) {
 }
 
 export function ListaEntregasDia() {
-  const { data: pedidos = [], isLoading } = useSWR("pedidos-hoy-lista", fetchPedidosHoy)
+  const { data: pedidos = [], isLoading } = useSWR(["pedidos", "entregas-dia", hoyISO()], fetchPedidosHoy)
   const printRef = useRef<HTMLDivElement>(null)
 
   const handlePrint = () => {
@@ -53,7 +55,7 @@ export function ListaEntregasDia() {
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Lista de entregas - ${formatDateLong(new Date().toISOString().split("T")[0])}</title>
+        <title>Lista de entregas - ${formatDateLong(hoyISO())}</title>
         <style>
           body { font-family: Arial, sans-serif; font-size: 14px; padding: 20px; max-width: 800px; margin: 0 auto; }
           h1 { text-align: center; margin-bottom: 8px; font-size: 22px; }
@@ -67,7 +69,7 @@ export function ListaEntregasDia() {
       </head>
       <body>
         <h1>Multiplanet Floristería</h1>
-        <p class="fecha">Lista de entregas - ${formatDateLong(new Date().toISOString().split("T")[0])}</p>
+        <p class="fecha">Lista de entregas - ${formatDateLong(hoyISO())}</p>
         <table>
           <thead>
             <tr>
@@ -120,7 +122,7 @@ export function ListaEntregasDia() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `entregas-${new Date().toISOString().split("T")[0]}.xls`
+    a.download = `entregas-${hoyISO()}.xls`
     a.click()
     URL.revokeObjectURL(url)
   }

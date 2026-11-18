@@ -19,24 +19,10 @@ import {
 import { PageHeader } from "@/components/page-header"
 import { EnablePush } from "@/components/notifications/enable-push"
 import { StatCard } from "./stat-card"
-import { createClient } from "@/lib/supabase/client"
+import { hoyISO, diasDesdeHoyISO } from "@/lib/fechas"
+import { fetchPedidosRango } from "@/lib/pedidos-data"
 import type { Pedido } from "@/lib/types"
 import { ESTADO_COLORS } from "@/lib/types"
-
-async function fetchPedidos(): Promise<Pedido[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from("pedidos")
-    .select(`
-      *,
-      arreglos (*)
-    `)
-    .order("fecha_entrega", { ascending: true })
-    .order("hora_entrega", { ascending: true })
-  
-  if (error) throw error
-  return data || []
-}
 
 function formatTime(timeStr: string | null) {
   if (!timeStr) return ""
@@ -68,17 +54,22 @@ function createWhatsAppLink(telefono: string, message: string): string {
 }
 
 export function DashboardView() {
-  const { data: pedidos, error, isLoading } = useSWR("pedidos-dashboard", fetchPedidos)
-
-  const today = new Date().toISOString().split("T")[0]
+  // Fecha local (no UTC) de hoy y mañana; sólo se descargan esos dos días
+  const today = hoyISO()
+  const tomorrow = diasDesdeHoyISO(1)
+  const { data: pedidos, error, isLoading } = useSWR(["pedidos", "rango", today, tomorrow], () =>
+    fetchPedidosRango(today, tomorrow),
+  )
 
   const stats = useMemo(() => {
     if (!pedidos) return { hoy: 0, pendientes: 0, entregados: 0, ingresos: 0, saldoPorCobrar: 0, totalHoy: 0 }
 
     const pedidosHoy = pedidos.filter(p => p.fecha_entrega === today)
     const entregadosHoy = pedidosHoy.filter(p => p.estado === "Entregado")
-    const ingresosHoy = pedidosHoy.reduce((sum, p) => sum + p.abono, 0)
-    const saldoPorCobrarHoy = pedidosHoy.reduce((sum, p) => sum + p.saldo, 0)
+    // Los pedidos cancelados no generan ingresos ni saldo por cobrar
+    const activosHoy = pedidosHoy.filter(p => p.estado !== "Cancelado")
+    const ingresosHoy = activosHoy.reduce((sum, p) => sum + p.abono, 0)
+    const saldoPorCobrarHoy = activosHoy.reduce((sum, p) => sum + Math.max(0, p.saldo), 0)
 
     return {
       hoy: pedidosHoy.length,
@@ -86,15 +77,9 @@ export function DashboardView() {
       entregados: entregadosHoy.length,
       ingresos: ingresosHoy,
       saldoPorCobrar: saldoPorCobrarHoy,
-      totalHoy: pedidosHoy.length
+      totalHoy: activosHoy.length
     }
   }, [pedidos, today])
-
-  const tomorrow = useMemo(() => {
-    const d = new Date()
-    d.setDate(d.getDate() + 1)
-    return d.toISOString().split("T")[0]
-  }, [])
 
   const pedidosManana = useMemo(() => {
     if (!pedidos) return []

@@ -79,6 +79,7 @@ test.describe("Pedido completo (formulario Nuevo)", () => {
     await d.locator("#cliente").fill("Prueba Sobrepago")
     await d.locator("#precio").fill("500")
     await d.locator("#pago-efectivo").fill("800")
+    await expect(d.getByRole("alert").first()).toContainText("mayor que el precio total")
     await d.getByRole("button", { name: /Crear pedido|Guardar/ }).click()
     await page.waitForTimeout(1000)
     const db = await getDb()
@@ -98,7 +99,9 @@ test.describe("Pedido completo (formulario Nuevo)", () => {
     await d.locator("#cliente").fill("Cliente Error")
     await d.locator("#precio").fill("300")
     await d.getByRole("button", { name: /Crear pedido|Guardar/ }).click()
-    await expect.poll(() => jsErrors.some((e) => e.includes("fallo de red simulado"))).toBe(true)
+    // Se muestra el error al usuario (aviso en pantalla)
+    await expect(page.getByText("fallo de red simulado")).toBeVisible()
+    await expect(d).toBeVisible() // el formulario sigue abierto con los datos
     // El botón debe volver a estar disponible para reintentar
     await expect(d.getByRole("button", { name: /Crear pedido|Guardar/ })).toBeEnabled()
   })
@@ -194,14 +197,57 @@ test.describe("Gestión de pedidos existentes", () => {
     })
   })
 
+  test("abonar funciona aunque la migración de base de datos aún no esté aplicada", async ({ page }) => {
+    // Simula una base sin la función registrar_abono
+    await page.route("**/rest/v1/rpc/registrar_abono*", (r) =>
+      r.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({ code: "PGRST202", message: "Could not find the function" }),
+      }),
+    )
+    await irA(page, "/pedidos")
+    const card = page.locator("[data-slot=card]").filter({ hasText: "Ana Martínez" })
+    await card.getByRole("button", { name: "Abonar" }).click()
+    const d = page.getByRole("dialog", { name: /Registrar Abono/ })
+    await d.getByRole("button", { name: "L200" }).click()
+    await d.getByRole("button", { name: /Registrar Abono/ }).click()
+    await expect(d).toBeHidden()
+    await expect.poll(async () => (await getDb()).pedidos.find((p) => p.id === "p1")).toMatchObject({
+      abono: 200,
+      pago_efectivo: 200,
+      saldo: 800,
+    })
+  })
+
+  test("'ver todos' muestra los más recientes y permite cargar más", async ({ page }) => {
+    const s = seedBasico()
+    s.pedidos = Array.from({ length: 60 }, (_, i) => ({
+      cliente: `Cliente ${String(i).padStart(2, "0")}`,
+      telefono: "99000000",
+      precio_total: 100,
+      fecha_entrega: fechaLocal(-i),
+    }))
+    await resetDb(s)
+    await irA(page, "/pedidos")
+    await page.locator("button:has(svg.lucide-x)").first().click()
+    const cards = page.locator("[data-slot=card]")
+    await expect(cards.first()).toContainText("Cliente 00") // el más reciente primero
+    await expect(cards).toHaveCount(50)
+    await page.getByRole("button", { name: "Cargar más pedidos" }).click()
+    await expect(cards).toHaveCount(60)
+    await expect(page.getByRole("button", { name: "Cargar más pedidos" })).toHaveCount(0)
+  })
+
   test("un abono mayor al saldo no debe dejar saldo negativo", async ({ page }) => {
     await irA(page, "/pedidos")
     const card = page.locator("[data-slot=card]").filter({ hasText: "Ana Martínez" })
     await card.getByRole("button", { name: "Abonar" }).click()
     const d = page.getByRole("dialog", { name: /Registrar Abono/ })
     await d.locator("#payment-amount").fill("1500")
-    await d.getByRole("button", { name: /Registrar|Confirmar|Abonar/ }).last().click()
-    await page.waitForTimeout(800)
+    // Se avisa y no se permite registrar
+    await expect(d.getByRole("alert")).toContainText("no puede ser mayor que el saldo")
+    await expect(d.getByRole("button", { name: /Registrar Abono/ })).toBeDisabled()
     const p = (await getDb()).pedidos.find((x) => x.id === "p1")!
     expect(p.saldo as number, "saldo negativo guardado").toBeGreaterThanOrEqual(0)
   })

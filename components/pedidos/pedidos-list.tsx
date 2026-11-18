@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useDeferredValue, useEffect, useMemo, useState } from "react"
 import useSWR from "swr"
 import { Plus, Filter, Zap, Calendar, X, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,23 +14,18 @@ import { PedidoCard } from "./pedido-card"
 import { PedidoForm } from "./pedido-form"
 import { QuickOrderForm } from "./quick-order-form"
 import { createClient } from "@/lib/supabase/client"
-import type { Flor, ArregloWithFlores, Pedido, EstadoPedido } from "@/lib/types"
+import { hoyISO, rangoMesISO } from "@/lib/fechas"
+import {
+  fetchConteoPorFecha,
+  fetchPedidosLista,
+  fetchPedidosRango,
+  PAGINA_PEDIDOS,
+  registrarAbono,
+  revalidarPedidos,
+} from "@/lib/pedidos-data"
+import { useDebounce } from "@/hooks/use-debounce"
+import type { Flor, ArregloWithFlores, Pedido, EstadoPedido, MetodoPago } from "@/lib/types"
 import { ESTADOS_PEDIDO, ESTADO_COLORS } from "@/lib/types"
-
-async function fetchPedidos(): Promise<Pedido[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from("pedidos")
-    .select(`
-      *,
-      arreglos (*)
-    `)
-    .order("fecha_entrega", { ascending: true })
-    .order("hora_entrega", { ascending: true })
-  
-  if (error) throw error
-  return data || []
-}
 
 async function fetchArreglosWithFlores(): Promise<ArregloWithFlores[]> {
   const supabase = createClient()
@@ -65,21 +60,55 @@ async function fetchFlores(): Promise<Flor[]> {
 }
 
 export function PedidosList() {
-  const { data: pedidos, error: pedidosError, isLoading: pedidosLoading, mutate: mutatePedidos } = useSWR("pedidos", fetchPedidos)
   const { data: arreglos, isLoading: arreglosLoading, mutate: mutateArreglos } = useSWR("arreglos-with-flores", fetchArreglosWithFlores)
-  const { data: flores, isLoading: floresLoading } = useSWR("flores-active", fetchFlores)
+  const { data: flores } = useSWR("flores-active", fetchFlores)
   const [showForm, setShowForm] = useState(false)
   const [showQuickForm, setShowQuickForm] = useState(false)
   const [editingPedido, setEditingPedido] = useState<Pedido | null>(null)
   const [filterEstado, setFilterEstado] = useState<EstadoPedido | "todos">("todos")
-  // Default to today's date to show today's orders first
-  const [filterFecha, setFilterFecha] = useState<string | null>(() => {
-    const today = new Date()
-    return today.toISOString().split("T")[0]
-  })
+  // Por defecto se muestran los pedidos de hoy (fecha local del teléfono, no UTC).
+  // Se calcula al montar en el navegador: la página se pre-genera en el servidor (en UTC)
+  // y calcular "hoy" allí causaba un desajuste de hidratación.
+  const [filterFecha, setFilterFecha] = useState<string | null | undefined>(undefined)
+  useEffect(() => {
+    setFilterFecha((actual) => (actual === undefined ? hoyISO() : actual))
+  }, [])
+  const fechaLista = filterFecha !== undefined
   const [showCalendar, setShowCalendar] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(() => new Date())
   const [searchTerm, setSearchTerm] = useState("")
+  const [limite, setLimite] = useState(PAGINA_PEDIDOS)
+
+  // Búsqueda: diferida para no bloquear el teclado, y con pausa para el servidor
+  const deferredSearch = useDeferredValue(searchTerm)
+  const normalizedSearch = useMemo(() => deferredSearch.trim().toLowerCase(), [deferredSearch])
+  const debouncedSearch = useDebounce(normalizedSearch, 350)
+
+  const arregloIdsCoinciden = useMemo(() => {
+    if (!debouncedSearch || !arreglos) return []
+    return arreglos.filter((a) => a.nombre.toLowerCase().includes(debouncedSearch)).map((a) => a.id)
+  }, [arreglos, debouncedSearch])
+
+  // Con fecha: sólo los pedidos de ese día. Sin fecha: lista paginada desde el servidor.
+  const { data: pedidos, error: pedidosError, isLoading: pedidosLoading } = useSWR(
+    !fechaLista
+      ? null
+      : filterFecha
+        ? ["pedidos", "rango", filterFecha, filterFecha]
+        : ["pedidos", "lista", filterEstado, debouncedSearch, arregloIdsCoinciden.join(","), limite],
+    () =>
+      filterFecha
+        ? fetchPedidosRango(filterFecha, filterFecha)
+        : fetchPedidosLista({ limite, estado: filterEstado, busqueda: debouncedSearch, arregloIdsCoinciden }),
+    { keepPreviousData: true },
+  )
+
+  // Conteo por día para el calendario: sólo el mes visible y sólo la columna fecha
+  const mesVisible = rangoMesISO(currentMonth)
+  const { data: ordersByDate = {} } = useSWR(
+    showCalendar ? ["pedidos", "conteo", mesVisible.desde, mesVisible.hasta] : null,
+    () => fetchConteoPorFecha(mesVisible.desde, mesVisible.hasta),
+  )
 
   const handleArreglosChange = () => {
     mutateArreglos()
@@ -104,7 +133,7 @@ export function PedidosList() {
     estado: EstadoPedido
   }) => {
     const supabase = createClient()
-    const today = new Date().toISOString().split("T")[0]
+    const today = hoyISO()
     const insertData = {
       ...data,
       fecha_entrega: data.fecha_entrega || today,
@@ -114,7 +143,7 @@ export function PedidosList() {
     }
     const { error } = await supabase.from("pedidos").insert([insertData])
     if (error) throw error
-    mutatePedidos()
+    await revalidarPedidos()
   }
 
   const handleUpdate = async (data: {
@@ -137,7 +166,7 @@ export function PedidosList() {
   }) => {
     if (!editingPedido) return
     const supabase = createClient()
-    const today = new Date().toISOString().split("T")[0]
+    const today = hoyISO()
     const updateData = {
       ...data,
       fecha_entrega: data.fecha_entrega || editingPedido.fecha_entrega || today,
@@ -151,7 +180,7 @@ export function PedidosList() {
       .eq("id", editingPedido.id)
     if (error) throw error
     setEditingPedido(null)
-    mutatePedidos()
+    await revalidarPedidos()
   }
 
   const handleDelete = async (id: string) => {
@@ -161,7 +190,7 @@ export function PedidosList() {
       .delete()
       .eq("id", id)
     if (error) throw error
-    mutatePedidos()
+    await revalidarPedidos()
   }
 
   const handleStatusChange = async (id: string, estado: EstadoPedido) => {
@@ -171,30 +200,21 @@ export function PedidosList() {
       .update({ estado })
       .eq("id", id)
     if (error) throw error
-    mutatePedidos()
+    await revalidarPedidos()
   }
 
-  const handlePaymentUpdate = async (id: string, amount: number, metodoPago: 'efectivo' | 'tarjeta' | 'transferencia') => {
+  const handlePaymentUpdate = async (id: string, amount: number, metodoPago: MetodoPago) => {
     const pedido = pedidos?.find(p => p.id === id)
     if (!pedido) return
-    const pagoEfectivo = (pedido.pago_efectivo ?? 0) + (metodoPago === 'efectivo' ? amount : 0)
-    const pagoTarjeta = (pedido.pago_tarjeta ?? 0) + (metodoPago === 'tarjeta' ? amount : 0)
-    const pagoTransferencia = (pedido.pago_transferencia ?? 0) + (metodoPago === 'transferencia' ? amount : 0)
-    const nuevoAbono = pagoEfectivo + pagoTarjeta + pagoTransferencia
-    const supabase = createClient()
-    const { error } = await supabase
-      .from("pedidos")
-      .update({ abono: nuevoAbono, pago_efectivo: pagoEfectivo, pago_tarjeta: pagoTarjeta, pago_transferencia: pagoTransferencia })
-      .eq("id", id)
-    if (error) throw error
-    mutatePedidos()
+    await registrarAbono(pedido, amount, metodoPago)
+    await revalidarPedidos()
   }
 
   const handleEdit = (pedido: Pedido) => {
     setEditingPedido(pedido)
   }
 
-  const isLoading = pedidosLoading || arreglosLoading || floresLoading
+  const isLoading = !fechaLista || pedidosLoading || arreglosLoading
 
   // Calendar constants
   const DAYS_ES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
@@ -203,25 +223,23 @@ export function PedidosList() {
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ]
 
-  // Count orders by date for calendar indicators
-  const ordersByDate = pedidos?.reduce((counts, pedido) => {
-    const date = pedido.fecha_entrega
-    if (!date) return counts
-    counts[date] = (counts[date] || 0) + 1
-    return counts
-  }, {} as Record<string, number>) || {}
+  // Con fecha seleccionada se filtra en el teléfono (son pocos pedidos);
+  // en "ver todos" el servidor ya aplicó estado y búsqueda.
+  const filteredPedidos = useMemo(() => {
+    if (!pedidos) return []
+    if (!filterFecha) return pedidos
+    return pedidos.filter((p) => {
+      const matchesEstado = filterEstado === "todos" || p.estado === filterEstado
+      const matchesSearch =
+        !normalizedSearch ||
+        (p.cliente || "").toLowerCase().includes(normalizedSearch) ||
+        (p.telefono || "").toLowerCase().includes(normalizedSearch) ||
+        (p.arreglos?.nombre || "").toLowerCase().includes(normalizedSearch)
+      return matchesEstado && matchesSearch
+    })
+  }, [pedidos, filterFecha, filterEstado, normalizedSearch])
 
-  const normalizedSearch = useMemo(() => searchTerm.trim().toLowerCase(), [searchTerm])
-  const filteredPedidos = pedidos?.filter(p => {
-    const matchesEstado = filterEstado === "todos" || p.estado === filterEstado
-    const matchesFecha = !filterFecha || p.fecha_entrega === filterFecha
-    const matchesSearch =
-      !normalizedSearch ||
-      p.cliente.toLowerCase().includes(normalizedSearch) ||
-      p.telefono.toLowerCase().includes(normalizedSearch) ||
-      (p.arreglos?.nombre || "").toLowerCase().includes(normalizedSearch)
-    return matchesEstado && matchesFecha && matchesSearch
-  }) || []
+  const hayMas = !filterFecha && (pedidos?.length ?? 0) >= limite
 
   const handleChangeMonth = (direction: "prev" | "next") => {
     setCurrentMonth(prev => {
@@ -359,8 +377,7 @@ export function PedidosList() {
                   const lastDayOfMonth = new Date(year, month + 1, 0)
                   const startingDay = firstDayOfMonth.getDay()
                   const daysInMonth = lastDayOfMonth.getDate()
-                  const today = new Date()
-                  const todayStr = today.toISOString().split("T")[0]
+                  const todayStr = hoyISO()
                   
                   const calendarDays: (number | null)[] = []
                   for (let i = 0; i < startingDay; i++) calendarDays.push(null)
@@ -452,7 +469,7 @@ export function PedidosList() {
             <div 
               key={pedido.id}
               className="animate-fade-in-up opacity-0"
-              style={{ animationDelay: `${idx * 50}ms` }}
+              style={{ animationDelay: `${Math.min(idx, 8) * 50}ms` }}
             >
             <PedidoCard
               pedido={pedido}
@@ -463,6 +480,13 @@ export function PedidosList() {
             />
             </div>
           ))}
+          {hayMas && (
+            <div className="flex justify-center pt-2">
+              <Button variant="outline" onClick={() => setLimite((l) => l + PAGINA_PEDIDOS)}>
+                Cargar más pedidos
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-12">

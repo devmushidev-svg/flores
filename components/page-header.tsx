@@ -11,7 +11,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, action, className, showLogo }: PageHeaderProps) {
   return (
-    <div className={cn("flex items-start justify-between gap-4", className)}>
+    <div className={cn("flex flex-wrap items-start justify-between gap-x-4 gap-y-3", className)}>
       <div className="flex items-center gap-3">
         {showLogo && (
           <div className="relative">
@@ -32,7 +32,7 @@ export function PageHeader({ title, description, action, className, showLogo }: 
           )}
         </div>
       </div>
-      {action && <div className="flex-shrink-0">{action}</div>}
+      {action && <div className="flex-shrink-0 max-w-full">{action}</div>}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 "use client"
 
+import { miniatura } from "@/lib/imagenes"
 import { useState, useMemo, useCallback, useEffect } from "react"
 import Image from "next/image"
 import { Search, Plus, ImageIcon, Check } from "lucide-react"
@@ -114,9 +115,10 @@ export function ArregloSelector({
         cantidad: f.cantidad
       }))
       
-      await supabase
+      const { error: floresError } = await supabase
         .from("arreglo_flores")
         .insert(floresData)
+      if (floresError) throw floresError
     }
 
     // Refresh arreglos list
@@ -192,7 +194,7 @@ export function ArregloSelector({
                       <div className="w-16 h-16 rounded-xl bg-muted relative overflow-hidden flex-shrink-0 shadow-md ring-1 ring-black/5">
                         {arreglo.foto_url ? (
                           <Image
-                            src={arreglo.foto_url}
+                            src={miniatura(arreglo.foto_url, 64) || arreglo.foto_url}
                             alt={arreglo.nombre}
                             fill
                             className="object-cover rounded-xl"

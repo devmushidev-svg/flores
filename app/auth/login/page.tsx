@@ -32,14 +32,12 @@ export default function Page() {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${window.location.origin}/protected`,
-        },
       })
       if (error) throw error
-      router.push('/protected')
+      // Volver a la página que se intentaba abrir (si vino redirigido), si no al Inicio
+      const next = new URLSearchParams(window.location.search).get('next')
+      router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/')
+      router.refresh()
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {

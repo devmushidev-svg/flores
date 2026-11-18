@@ -25,6 +25,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { ArregloSelector } from "./arreglo-selector"
 import { createClient } from "@/lib/supabase/client"
+import { avisarError } from "@/lib/errores"
+import { miniatura } from "@/lib/imagenes"
+import { useDebounce } from "@/hooks/use-debounce"
 import { uploadToCloudinary } from "@/lib/cloudinary"
 import { isHeicFormat } from "@/lib/image-converter"
 import type { Flor, ArregloWithFlores, Pedido, EstadoPedido, Cliente } from "@/lib/types"
@@ -57,14 +60,19 @@ interface PedidoFormProps {
   onArreglosChange: () => void
 }
 
-const fetcher = async () => {
+/** Busca clientes en el servidor (máx. 8) en vez de descargar toda la tabla. */
+async function buscarClientes(campo: "telefono" | "nombre", termino: string): Promise<Cliente[]> {
+  const limpio = termino.replace(/[,()*%\\:"]/g, " ").trim()
+  if (limpio.length < 2) return []
   const supabase = createClient()
   const { data, error } = await supabase
     .from("clientes")
     .select("*")
+    .ilike(campo, `%${limpio}%`)
     .order("updated_at", { ascending: false })
+    .limit(8)
   if (error) throw error
-  return data as Cliente[]
+  return (data as Cliente[]) || []
 }
 
 export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSubmit, onArreglosChange }: PedidoFormProps) {
@@ -94,9 +102,14 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
   const [clientSearchFocused, setClientSearchFocused] = useState<'telefono' | 'nombre' | null>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
+  const terminoCliente = clientSearchFocused === "telefono" ? telefono : clientSearchFocused === "nombre" ? cliente : ""
+  const terminoDebounced = useDebounce(terminoCliente.trim(), 250)
   const { data: clientes = [], mutate: mutateClientes } = useSWR(
-    open ? "clientes" : null,
-    fetcher
+    open && clientSearchFocused && terminoDebounced.length >= 2
+      ? ["clientes-busqueda", clientSearchFocused, terminoDebounced]
+      : null,
+    () => buscarClientes(clientSearchFocused!, terminoDebounced),
+    { keepPreviousData: true },
   )
 
   const isEditing = !!pedido
@@ -168,7 +181,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
     setSelectedArreglo(arreglo)
   }, [arreglos, open, pedido?.arreglo_id])
 
-  // Filter clients based on input
+  // Las sugerencias ya vienen filtradas del servidor; se vuelve a filtrar por si el texto cambió
   const filteredClients = clientes.filter(c => {
     if (clientSearchFocused === 'telefono' && telefono.length >= 2) {
       return c.telefono.includes(telefono)
@@ -218,9 +231,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       setPedidoFotoUrl(result.url)
       setUploadPhotoStatus("")
     } catch (error) {
-      console.error("Error uploading pedido image:", error)
-      const errorMessage = error instanceof Error ? error.message : "Error al subir la foto"
-      alert(errorMessage)
+      avisarError(error, "Error al subir la foto")
       setUploadPhotoStatus("")
     } finally {
       setIsUploadingPhoto(false)
@@ -271,6 +282,9 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       }
 
       const abonoVal = sumPagos || abonoIngresado || 0
+      if (abonoVal > precioTotalVal + 0.009) {
+        throw new Error(`El abono (L${abonoVal.toFixed(2)}) no puede ser mayor que el precio total (L${precioTotalVal.toFixed(2)}).`)
+      }
 
       await onSubmit({
         cliente: cliente.trim(),
@@ -297,8 +311,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
       resetForm()
       onOpenChange(false)
     } catch (error) {
-      console.error("Error saving pedido:", error)
-      alert(getErrorMessage(error))
+      avisarError(error, getErrorMessage(error))
     } finally {
       setIsSubmitting(false)
     }
@@ -558,7 +571,7 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
                     <div className="w-14 h-14 rounded-xl bg-muted relative overflow-hidden flex-shrink-0 shadow-md ring-1 ring-black/5">
                       {selectedArreglo.foto_url ? (
                         <Image
-                          src={selectedArreglo.foto_url}
+                          src={miniatura(selectedArreglo.foto_url, 56) || selectedArreglo.foto_url}
                           alt={selectedArreglo.nombre}
                           fill
                           className="object-cover rounded-xl"
@@ -704,8 +717,13 @@ export function PedidoForm({ open, onOpenChange, pedido, arreglos, flores, onSub
               {precioTotal && (
                 <div className="flex items-center justify-between pt-2 border-t">
                   <span className="text-sm font-medium">Saldo pendiente:</span>
-                  <span className="font-bold text-primary">L{saldo.toFixed(2)}</span>
+                  <span className={saldo < -0.009 ? "font-bold text-red-600" : "font-bold text-primary"}>L{saldo.toFixed(2)}</span>
                 </div>
+              )}
+              {saldo < -0.009 && (
+                <p className="text-sm font-medium text-red-600" role="alert">
+                  El abono es mayor que el precio total. Corrige los montos antes de guardar.
+                </p>
               )}
             </div>
 

@@ -48,14 +48,23 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    // if the user is not logged in and the app path, in this case, /protected, is accessed, redirect to the login page
-    request.nextUrl.pathname.startsWith('/protected') &&
-    !user
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  const path = request.nextUrl.pathname
+  // Exigir sesión en toda la app cuando REQUIRE_AUTH=true (ver docs/SEGURIDAD.md).
+  // Desactivado por defecto para no bloquear la tienda antes de crear las cuentas.
+  const requireAuth = process.env.REQUIRE_AUTH === 'true' || process.env.NEXT_PUBLIC_REQUIRE_AUTH === 'true'
+  const isPublic =
+    path.startsWith('/auth') ||
+    path === '/manifest.json' ||
+    path === '/sw.js' ||
+    path.startsWith('/icons/')
+
+  if (!user && !isPublic && (requireAuth || path.startsWith('/protected'))) {
+    if (path.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Inicia sesión para continuar' }, { status: 401 })
+    }
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
+    url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`
     return NextResponse.redirect(url)
   }
 

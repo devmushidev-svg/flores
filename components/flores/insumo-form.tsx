@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { avisarError } from "@/lib/errores"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -49,10 +50,20 @@ export function InsumoForm({ open, onOpenChange, insumo, onSubmit }: InsumoFormP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!nombre.trim() || !precio) return
+    const precioVal = parseFloat(precio)
+    if (!Number.isFinite(precioVal) || precioVal < 0) {
+      avisarError(new Error("El precio debe ser un número válido."))
+      return
+    }
     setIsSubmitting(true)
-    await onSubmit({ nombre: nombre.trim(), precio_actual: parseFloat(precio), unidad })
-    setIsSubmitting(false)
-    onOpenChange(false)
+    try {
+      await onSubmit({ nombre: nombre.trim(), precio_actual: precioVal, unidad })
+      onOpenChange(false)
+    } catch (error) {
+      avisarError(error, "No se pudo guardar el insumo")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (

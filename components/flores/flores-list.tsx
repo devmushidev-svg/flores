@@ -66,7 +66,7 @@ async function fetchPedidosByDateRange(dateFrom: string, dateTo: string) {
     .select("id, fecha_entrega, estado, arreglo_id")
     .gte("fecha_entrega", dateFrom)
     .lte("fecha_entrega", dateTo)
-    .in("estado", ["Pendiente", "En preparacion"])
+    .in("estado", ["Pendiente", "En preparación"])
   
   if (error) throw error
   return data || []
@@ -272,7 +272,7 @@ export function FloresList() {
                 <div 
                   key={flor.id}
                   className="animate-fade-in-up opacity-0"
-                  style={{ animationDelay: `${idx * 50}ms` }}
+                  style={{ animationDelay: `${Math.min(idx, 8) * 50}ms` }}
                 >
                   <FlorCard
                     flor={flor}

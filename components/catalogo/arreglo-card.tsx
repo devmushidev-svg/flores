@@ -1,6 +1,8 @@
 "use client"
 
+import { miniatura } from "@/lib/imagenes"
 import { useState } from "react"
+import { avisarError } from "@/lib/errores"
 import Image from "next/image"
 import { Pencil, Trash2, ImageIcon, Copy } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -30,9 +32,14 @@ export function ArregloCard({ arreglo, onEdit, onDelete, onDuplicate }: ArregloC
 
   const handleDelete = async () => {
     setIsDeleting(true)
-    await onDelete(arreglo.id)
-    setIsDeleting(false)
-    setShowDeleteDialog(false)
+    try {
+      await onDelete(arreglo.id)
+      setShowDeleteDialog(false)
+    } catch (error) {
+      avisarError(error, "No se pudo eliminar")
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const costoEstimado = arreglo.arreglo_flores?.reduce((sum, af) => {
@@ -48,7 +55,7 @@ export function ArregloCard({ arreglo, onEdit, onDelete, onDuplicate }: ArregloC
           <div className="w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 relative shadow-md ring-1 ring-black/5">
             {arreglo.foto_url ? (
               <Image
-                src={arreglo.foto_url}
+                src={miniatura(arreglo.foto_url, 96) || arreglo.foto_url}
                 alt={arreglo.nombre}
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-105 rounded-xl"

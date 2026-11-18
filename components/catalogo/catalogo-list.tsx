@@ -12,6 +12,7 @@ import { ArregloCard } from "./arreglo-card"
 import { ArregloForm } from "./arreglo-form"
 import { CatalogoImport } from "./catalogo-import"
 import { createClient } from "@/lib/supabase/client"
+import { avisarError } from "@/lib/errores"
 import type { Flor, ArregloWithFlores } from "@/lib/types"
 import { CATEGORIAS_ARREGLO } from "@/lib/types"
 import {
@@ -137,10 +138,9 @@ export function CatalogoList() {
 
     if (arregloError) throw arregloError
 
-    await supabase
-      .from("arreglo_flores")
-      .delete()
-      .eq("arreglo_id", editingArreglo.id)
+    // Primero se insertan las flores nuevas y luego se borran las anteriores:
+    // si algo falla a la mitad, el arreglo nunca queda sin flores.
+    const idsAnteriores = (editingArreglo.arreglo_flores || []).map((af) => af.id).filter(Boolean)
 
     if (data.flores.length > 0) {
       const floresData = data.flores.map((f) => ({
@@ -154,6 +154,14 @@ export function CatalogoList() {
         .insert(floresData)
 
       if (floresError) throw floresError
+    }
+
+    if (idsAnteriores.length > 0) {
+      const { error: deleteError } = await supabase
+        .from("arreglo_flores")
+        .delete()
+        .in("id", idsAnteriores)
+      if (deleteError) throw deleteError
     }
 
     setEditingArreglo(null)
@@ -190,7 +198,7 @@ export function CatalogoList() {
       .single()
 
     if (arregloError) {
-      alert("Error al duplicar: " + arregloError.message)
+      avisarError(arregloError, "No se pudo duplicar el arreglo")
       return
     }
 
@@ -200,7 +208,8 @@ export function CatalogoList() {
         flor_id: af.flor_id,
         cantidad: af.cantidad,
       }))
-      await supabase.from("arreglo_flores").insert(floresData)
+      const { error: floresError } = await supabase.from("arreglo_flores").insert(floresData)
+      if (floresError) avisarError(floresError, "El arreglo se duplicó, pero no se copiaron sus flores")
     }
 
     mutateArreglos()
@@ -261,7 +270,7 @@ export function CatalogoList() {
   if (arreglosError) {
     return (
       <div className="space-y-6">
-        <PageHeader title="CatÃ¡logo de Arreglos" description="Crea y gestiona tus arreglos florales" />
+        <PageHeader title="Catálogo de Arreglos" description="Crea y gestiona tus arreglos florales" />
         <div className="text-center py-12 text-destructive">
           Error al cargar los arreglos
         </div>
@@ -272,7 +281,7 @@ export function CatalogoList() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="CatÃ¡logo de Arreglos"
+        title="Catálogo de Arreglos"
         description="Crea y gestiona tus arreglos florales"
         action={
           <div className="flex gap-2">
@@ -361,7 +370,7 @@ export function CatalogoList() {
             <div
               key={arreglo.id}
               className="animate-fade-in-up opacity-0"
-              style={{ animationDelay: `${idx * 50}ms` }}
+              style={{ animationDelay: `${Math.min(idx, 8) * 50}ms` }}
             >
               <ArregloCard
                 arreglo={arreglo}
@@ -378,7 +387,7 @@ export function CatalogoList() {
           <p className="text-muted-foreground mb-4">
             {arreglos && arreglos.length > 0
               ? "No hay arreglos que coincidan con los filtros"
-              : "No hay arreglos en el catÃ¡logo"}
+              : "No hay arreglos en el catálogo"}
           </p>
           {arreglos && arreglos.length > 0 ? (
             <Button

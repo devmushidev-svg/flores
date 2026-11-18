@@ -35,7 +35,7 @@ function seedGrande(): Seed {
     nombre: `Cliente ${i}`,
     direccion: `Colonia ${i % 50}, casa ${i}`,
   }))
-  const pedidos = []
+  const pedidos: Record<string, unknown>[] = []
   for (let d = -DIAS_HISTORIAL; d <= 14; d++) {
     const fecha = fechaLocal(d)
     for (let k = 0; k < PEDIDOS_POR_DIA; k++) {
@@ -163,21 +163,23 @@ test.describe("Rendimiento con 2 años de datos", () => {
     }
   })
 
-  test("Pedidos → 'Ver todos' (lista completa)", async ({ page }) => {
+  test("Pedidos → 'Ver todos' y búsqueda", async ({ page }) => {
     await irA(page, "/pedidos")
     await medir(
       page,
       "Pedidos: quitar filtro de fecha (ver todos)",
       () => page.locator("button:has(svg.lucide-x)").first().click(),
       async () => {
-        await expect(page.locator("[data-slot=card]").nth(50)).toBeAttached({ timeout: 60_000 })
+        // La lista debe mostrar pedidos (la primera página) y terminar de cargar
+        await expect(page.locator("[data-slot=card]").nth(20)).toBeAttached({ timeout: 120_000 })
+        await expect(page.locator("svg.animate-spin")).toHaveCount(0, { timeout: 120_000 })
       },
     )
-    // Animación escalonada idx*50ms: ¿cuánto tarda en verse el pedido nº 100?
-    const delay = await page.locator(".animate-fade-in-up").nth(100).evaluate((el) => (el as HTMLElement).style.animationDelay)
     const total = await page.locator("[data-slot=card]").count()
+    const ultima = page.locator(".animate-fade-in-up").last()
+    const delay = await ultima.evaluate((el) => (el as HTMLElement).style.animationDelay || "0ms")
     resultados.push({
-      escenario: `Pedidos: ${total} tarjetas en el DOM; la nº100 aparece tras ${delay}`,
+      escenario: `Pedidos: ${total} tarjetas en el DOM; la última aparece tras ${delay}`,
       ms_hasta_contenido: parseInt(delay) || 0,
       peticiones_supabase: 0,
       kb_json_supabase: 0,
@@ -185,20 +187,19 @@ test.describe("Rendimiento con 2 años de datos", () => {
       kb_js_descargado: 0,
       detalle_peticiones: [],
     })
-    // Escribir en el buscador con la lista completa
+    // Escribir en el buscador (con "ver todos" activo)
     const input = page.getByPlaceholder("Buscar por cliente, teléfono o arreglo...")
-    const t0 = Date.now()
-    await input.pressSequentially("Cliente 12", { delay: 0 })
-    await expect(input).toHaveValue("Cliente 12")
-    resultados.push({
-      escenario: "Pedidos: teclear 10 letras en el buscador (lista completa)",
-      ms_hasta_contenido: Date.now() - t0,
-      peticiones_supabase: 0,
-      kb_json_supabase: 0,
-      kb_json_gzip: 0,
-      kb_js_descargado: 0,
-      detalle_peticiones: [],
-    })
+    await medir(
+      page,
+      "Pedidos: teclear 10 letras en el buscador y ver resultados",
+      async () => {
+        await input.pressSequentially("Cliente 12", { delay: 0 })
+        await expect(input).toHaveValue("Cliente 12")
+      },
+      async () => {
+        await expect(page.locator("[data-slot=card]").first()).toContainText("Cliente 12", { timeout: 120_000 })
+      },
+    )
   })
 
   test("abrir formulario 'Nuevo pedido'", async ({ page }) => {

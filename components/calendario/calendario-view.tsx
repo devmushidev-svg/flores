@@ -9,26 +9,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { PageHeader } from "@/components/page-header"
-import { createClient } from "@/lib/supabase/client"
+import { hoyISO, diasDesdeHoyISO, rangoMesISO } from "@/lib/fechas"
+import { fetchConteoPorFecha, fetchPedidosRango } from "@/lib/pedidos-data"
 import type { Pedido } from "@/lib/types"
 import { ESTADO_COLORS } from "@/lib/types"
 import { cn } from "@/lib/utils"
-
-async function fetchAllPedidos(): Promise<Pedido[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from("pedidos")
-    .select(`
-      *,
-      arreglos (*)
-    `)
-    .neq("estado", "Cancelado")
-    .order("fecha_entrega", { ascending: true })
-    .order("hora_entrega", { ascending: true })
-  
-  if (error) throw error
-  return data || []
-}
 
 function formatTime(timeStr: string | null) {
   if (!timeStr) return "Sin hora"
@@ -42,12 +27,8 @@ function formatTime(timeStr: string | null) {
 function formatDateLong(dateStr: string | null) {
   if (!dateStr) return "Sin fecha"
   const date = new Date(dateStr + "T00:00:00")
-  const today = new Date()
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  const todayStr = today.toISOString().split("T")[0]
-  const tomorrowStr = tomorrow.toISOString().split("T")[0]
+  const todayStr = hoyISO()
+  const tomorrowStr = diasDesdeHoyISO(1)
 
   if (dateStr === todayStr) {
     return "Hoy"
@@ -91,8 +72,7 @@ function CalendarGrid({
   const startingDay = firstDayOfMonth.getDay()
   const daysInMonth = lastDayOfMonth.getDate()
   
-  const today = new Date()
-  const todayStr = today.toISOString().split("T")[0]
+  const todayStr = hoyISO()
   
   // Generate calendar days
   const calendarDays: (number | null)[] = []
@@ -208,32 +188,22 @@ export function CalendarioView() {
   const [currentMonth, setCurrentMonth] = useState(() => new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   
-  const { data: pedidos, error, isLoading } = useSWR("pedidos-calendario-all", fetchAllPedidos)
+  // Conteo del mes visible (sólo la columna fecha) para los puntitos del calendario
+  const mes = rangoMesISO(currentMonth)
+  const { data: ordersByDate = {} } = useSWR(
+    ["pedidos", "conteo-activos", mes.desde, mes.hasta],
+    () => fetchConteoPorFecha(mes.desde, mes.hasta, { excluirCancelados: true }),
+    { keepPreviousData: true },
+  )
 
-  // Count orders by date for calendar indicators
-  const ordersByDate = useMemo(() => {
-    if (!pedidos) return {}
-    
-    return pedidos.reduce((counts, pedido) => {
-      const date = pedido.fecha_entrega
-      if (!date) return counts
-      counts[date] = (counts[date] || 0) + 1
-      return counts
-    }, {} as Record<string, number>)
-  }, [pedidos])
-
-  // Filter pedidos based on selection
-  const filteredPedidos = useMemo(() => {
-    if (!pedidos) return []
-    
-    if (selectedDate) {
-      return pedidos.filter(p => p.fecha_entrega === selectedDate)
-    }
-    
-    // Show upcoming orders when no date is selected
-    const today = new Date().toISOString().split("T")[0]
-    return pedidos.filter(p => p.fecha_entrega && p.fecha_entrega >= today)
-  }, [pedidos, selectedDate])
+  // Lista: el día elegido, o las próximas entregas (hoy + 60 días)
+  const desde = selectedDate ?? hoyISO()
+  const hasta = selectedDate ?? diasDesdeHoyISO(60)
+  const { data: filteredPedidos = [], error, isLoading } = useSWR(
+    ["pedidos", "rango-activos", desde, hasta],
+    () => fetchPedidosRango(desde, hasta, { excluirCancelados: true }),
+    { keepPreviousData: true },
+  )
 
   // Group filtered pedidos by date
   const groupedPedidos = useMemo(() => {

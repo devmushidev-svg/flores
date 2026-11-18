@@ -6,6 +6,57 @@ Revisión del código, más pruebas automáticas que usan la app como lo haría 
 
 **Resultado:** 38 pruebas. 25 pasan y 13 fallan. Las 13 que fallan son **bugs reales**, no errores de la prueba.
 
+## ✅ Estado: corregido (18 nov 2026)
+
+Todos los bugs de esta auditoría están corregidos en este PR. **Las 36 pruebas pasan.**
+
+Además de las 34 pruebas originales (la auditoría inicial contaba 38 porque incluía las 4 de rendimiento), se agregaron dos pruebas nuevas:
+- Los abonos siguen funcionando aunque no se haya aplicado la migración de base de datos.
+- "Ver todos" muestra primero los pedidos más recientes y permite cargar más.
+
+Quedan dos pasos manuales en Supabase y Vercel (migración y login). Están explicados en [`docs/SEGURIDAD.md`](SEGURIDAD.md).
+
+| # | Corrección |
+|---|-----------|
+| B1 | Nuevo `lib/fechas.ts` con la fecha local. Se reemplazaron los 15 `toISOString().split("T")[0]`. La lista de Pedidos calcula "hoy" en el teléfono, no en el servidor. |
+| B2 | Búsqueda segura cuando el teléfono es `null`. Se reactivó la revisión de TypeScript en el build (`ignoreBuildErrors: false`). |
+| B3 | Los formularios y el diálogo de abono avisan y bloquean el sobrepago. En base de datos: `CHECK (abono <= precio_total)` y la función `registrar_abono`. |
+| B4 | El filtro usa `"En preparación"` con tilde. |
+| B5 | Los pedidos cancelados ya no suman a ingresos, saldo por cobrar ni barra de progreso. |
+| B6–B8 | Todos los formularios y botones manejan errores: muestran un aviso con un mensaje claro (por ejemplo, "Ya existe un arreglo con ese código") y nunca quedan bloqueados. |
+| B9 | El texto "Catálogo" se ve correctamente. |
+| B10 | El menú inferior y el encabezado de Inicio caben en pantallas de 375 px. |
+| B11 | Abonos atómicos con la función `registrar_abono`. Si la función todavía no existe, la app usa el método anterior. |
+| B12 | Al editar un arreglo, primero se insertan las flores nuevas y después se borran las anteriores, revisando errores en cada paso. |
+| B13 | Se permite hacer zoom. |
+| S1 | Login obligatorio activable con `REQUIRE_AUTH=true`, más un script de RLS para usuarios autenticados (ver SEGURIDAD.md). |
+| S2 | `/api/import-remote` sólo acepta una lista de dominios permitidos y limita el tamaño a 25 MB. |
+| Extra | Se escapa el HTML al imprimir reportes. La tasa de entrega ya no da NaN si todos los pedidos están cancelados. |
+
+### Rapidez: antes y después
+Mismo escenario: 2 años de datos, red 4G y CPU 4× más lenta.
+
+| Escenario | Antes | Después |
+|---|---|---|
+| Abrir Inicio | 2,8 s · 2,3 MB | **1,6 s · 5 KB** |
+| Abrir Pedidos | 2,6 s · 2,3 MB | **1,6 s · 73 KB** |
+| Abrir Reportes (hoy) | 2,4 s · 2,3 MB | **1,4 s · 2 KB** |
+| Menú → Pedidos | 1,2 s · 2,3 MB | **0,7 s · 73 KB** |
+| Menú → Entregas | 0,9 s · 2,1 MB | **0,3 s · 40 KB** |
+| Pedidos → "ver todos" | **26,5 s** (2.980 tarjetas) | **0,9 s** (50 tarjetas + "Cargar más") |
+| Buscar escribiendo 10 letras | **85 s** | **3 s** (incluye escribir y la consulta) |
+
+**Qué cambió:**
+- Las consultas filtran por fecha, estado y búsqueda en el servidor.
+- Sólo se piden las columnas necesarias del arreglo.
+- "Ver todos" se carga paginado.
+- La búsqueda usa una pausa (*debounce*) y `useDeferredValue`.
+- El autocompletado de clientes consulta al servidor (máximo 8 resultados).
+- Hay caché SWR compartida entre pantallas.
+- Las miniaturas de Cloudinary se piden ya reducidas.
+- La animación de las tarjetas tiene tope.
+- Se quitó una consulta de Reportes que no se usaba.
+
 ---
 
 ## 1. Bugs encontrados (por prioridad)

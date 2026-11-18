@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import useSWR from "swr"
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, parseISO, isWithinInterval } from "date-fns"
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from "date-fns"
 import { es } from "date-fns/locale"
 import { 
   Calendar as CalendarIcon, 
@@ -26,11 +26,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Spinner } from "@/components/ui/spinner"
 import { Progress } from "@/components/ui/progress"
-import { createClient } from "@/lib/supabase/client"
+import { fechaISO, hoyISO } from "@/lib/fechas"
+import { fetchPedidosRango } from "@/lib/pedidos-data"
 import { AppShell } from "@/components/app-shell"
 import { PageHeader } from "@/components/page-header"
 import { ESTADO_COLORS } from "@/lib/types"
-import type { Pedido, ArregloWithFlores } from "@/lib/types"
 
 type PeriodType = "hoy" | "semana" | "mes" | "ultimos30"
 
@@ -41,60 +41,41 @@ const periodLabels: Record<PeriodType, string> = {
   ultimos30: "Últimos 30 días"
 }
 
-const fetcher = async () => {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from("pedidos")
-    .select("*, arreglos(*)")
-    .order("created_at", { ascending: false })
-  if (error) throw error
-  return data as Pedido[]
-}
-
-const fetchArreglos = async () => {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from("arreglos")
-    .select("*, arreglo_flores(*, flores(*))")
-    .eq("is_active", true)
-  if (error) throw error
-  return data as ArregloWithFlores[]
+function escapeHtml(value: string | null | undefined) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
 export function ReportesView() {
   const [period, setPeriod] = useState<PeriodType>("hoy")
   
-  const { data: pedidos = [], isLoading: loadingPedidos } = useSWR("reportes-pedidos", fetcher)
-  const { data: arreglos = [], isLoading: loadingArreglos } = useSWR("reportes-arreglos", fetchArreglos)
-
-  const isLoading = loadingPedidos || loadingArreglos
-
-  // Calculate date range based on period
+  // Rango de fechas del periodo (fecha local)
   const dateRange = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
     switch (period) {
       case "hoy":
-        return { start: today, end: new Date() }
+        return { start: today, end: today }
       case "semana":
         return { start: startOfWeek(today, { locale: es }), end: endOfWeek(today, { locale: es }) }
       case "mes":
         return { start: startOfMonth(today), end: endOfMonth(today) }
       case "ultimos30":
-        return { start: subDays(today, 30), end: new Date() }
+        return { start: subDays(today, 30), end: today }
     }
   }, [period])
 
-  // Filter pedidos by period (using fecha_entrega - delivery date)
-  const filteredPedidos = useMemo(() => {
-    return pedidos.filter(p => {
-      if (!p.fecha_entrega) return false
-      // Parse fecha_entrega (format: YYYY-MM-DD)
-      const fechaEntrega = parseISO(p.fecha_entrega)
-      return isWithinInterval(fechaEntrega, { start: dateRange.start, end: dateRange.end })
-    })
-  }, [pedidos, dateRange])
+  // Sólo se descargan los pedidos del periodo elegido (por fecha de entrega)
+  const desde = fechaISO(dateRange.start)
+  const hasta = fechaISO(dateRange.end)
+  const { data: filteredPedidos = [], isLoading } = useSWR(
+    ["pedidos", "rango", desde, hasta],
+    () => fetchPedidosRango(desde, hasta),
+    { keepPreviousData: true },
+  )
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -113,10 +94,10 @@ export function ReportesView() {
     const abonosRecibidos = filteredPedidos.reduce((sum, p) => sum + p.abono, 0)
     const saldoPendiente = filteredPedidos
       .filter(p => p.estado !== "Cancelado")
-      .reduce((sum, p) => sum + p.saldo, 0)
+      .reduce((sum, p) => sum + Math.max(0, p.saldo), 0)
 
     // Average order value
-    const promedioOrden = total > 0 ? ingresos / entregados : 0
+    const promedioOrden = entregados > 0 ? ingresos / entregados : 0
 
     // Most popular arreglos
     const arregloCount: Record<string, { nombre: string, count: number }> = {}
@@ -148,7 +129,7 @@ export function ReportesView() {
       promedioOrden,
       topArreglos,
       uniqueClients,
-      tasaEntrega: total > 0 ? (entregados / (total - cancelados)) * 100 : 0
+      tasaEntrega: total - cancelados > 0 ? (entregados / (total - cancelados)) * 100 : 0
     }
   }, [filteredPedidos])
 
@@ -178,7 +159,7 @@ export function ReportesView() {
                   const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" })
                   const a = document.createElement("a")
                   a.href = URL.createObjectURL(blob)
-                  a.download = `reporte-${period}-${new Date().toISOString().split("T")[0]}.xls`
+                  a.download = `reporte-${period}-${hoyISO()}.xls`
                   a.click()
                   URL.revokeObjectURL(a.href)
                 }}
@@ -200,7 +181,7 @@ export function ReportesView() {
                     <h1>Reporte - ${periodLabels[period]}</h1>
                     <p>Generado: ${new Date().toLocaleString("es-HN")}</p>
                     <table><tr><th>Cliente</th><th>Fecha</th><th>Arreglo</th><th>Total</th><th>Estado</th></tr>
-                    ${filteredPedidos.map((p) => `<tr><td>${p.cliente}</td><td>${p.fecha_entrega}</td><td>${p.arreglos?.nombre || ""}</td><td>L${p.precio_total.toFixed(2)}</td><td>${p.estado}</td></tr>`).join("")}
+                    ${filteredPedidos.map((p) => `<tr><td>${escapeHtml(p.cliente)}</td><td>${escapeHtml(p.fecha_entrega)}</td><td>${escapeHtml(p.arreglos?.nombre)}</td><td>L${p.precio_total.toFixed(2)}</td><td>${escapeHtml(p.estado)}</td></tr>`).join("")}
                     </table>
                     <p style="margin-top:20px;">Total: ${filteredPedidos.length} pedidos | Ingresos: L${stats.ingresos.toFixed(2)}</p>
                     </body></html>`)

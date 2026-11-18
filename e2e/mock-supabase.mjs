@@ -35,10 +35,14 @@ const SCHEMA = {
       arreglo_id: null, foto_url: null, descripcion: null, mensaje_tarjeta: null,
       abono: 0, pago_efectivo: 0, pago_tarjeta: 0, pago_transferencia: 0, estado: "Pendiente",
     },
-    check: (r) =>
-      ["Pendiente", "En preparación", "En ruta", "Entregado", "Cancelado"].includes(r.estado)
-        ? null
-        : `new row for relation "pedidos" violates check constraint "pedidos_estado_check"`,
+    check: (r) => {
+      if (!["Pendiente", "En preparación", "En ruta", "Entregado", "Cancelado"].includes(r.estado))
+        return `new row for relation "pedidos" violates check constraint "pedidos_estado_check"`
+      // Igual que la migración 20261118000001 (pedidos_abono_valido)
+      if (Number(r.abono || 0) < 0 || Number(r.abono || 0) > Number(r.precio_total) + 1e-9)
+        return `new row for relation "pedidos" violates check constraint "pedidos_abono_valido" (abono)`
+      return null
+    },
     generated: (r) => ({ saldo: round2(Number(r.precio_total) - Number(r.abono || 0)) }),
   },
 }
@@ -218,10 +222,8 @@ function cmp(a, b) {
   return String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0
 }
 
-function buildFilters(params) {
-  const filters = []
-  for (const [key, raw] of params.entries()) {
-    if (RESERVED.has(key)) continue
+function makeCond(key, raw) {
+  {
     const dot = raw.indexOf(".")
     let op = raw.slice(0, dot)
     let val = raw.slice(dot + 1)
@@ -257,7 +259,42 @@ function buildFilters(params) {
         default: throw httpErr(400, "PGRST100", `operador no soportado en mock: ${op}`)
       }
     }
-    filters.push(negate ? (r) => !fn(r) : fn)
+    return negate ? (r) => !fn(r) : fn
+  }
+}
+
+// Divide "a,b(c,d),e" por comas de primer nivel (respeta paréntesis y comillas)
+function splitTopLevel(str) {
+  const out = []
+  let depth = 0
+  let q = false
+  let cur = ""
+  for (const ch of str) {
+    if (ch === '"') q = !q
+    if (!q && ch === "(") depth++
+    if (!q && ch === ")") depth--
+    if (!q && depth === 0 && ch === ",") {
+      out.push(cur)
+      cur = ""
+    } else cur += ch
+  }
+  if (cur) out.push(cur)
+  return out
+}
+
+function buildFilters(params) {
+  const filters = []
+  for (const [key, raw] of params.entries()) {
+    if (RESERVED.has(key)) continue
+    if (key === "or") {
+      const fns = splitTopLevel(raw.replace(/^\(/, "").replace(/\)$/, "")).map((part) => {
+        const d = part.indexOf(".")
+        return makeCond(part.slice(0, d), part.slice(d + 1))
+      })
+      filters.push((r) => fns.some((f) => f(r)))
+      continue
+    }
+    filters.push(makeCond(key, raw))
   }
   return (row) => filters.every((f) => f(row))
 }
@@ -323,8 +360,29 @@ function send(res, status, body, extraHeaders = {}) {
   return Buffer.byteLength(payload)
 }
 
+// Igual que la función SQL registrar_abono (migración 20261118000001)
+async function handleRpc(req, res, name) {
+  if (name !== "registrar_abono")
+    throw httpErr(404, "PGRST202", `Could not find the function public.${name} in the schema cache`)
+  const { p_pedido_id, p_monto, p_metodo } = await readBody(req)
+  const monto = Number(p_monto)
+  if (!(monto > 0)) throw httpErr(400, "22023", "El monto debe ser mayor que cero")
+  if (!["efectivo", "tarjeta", "transferencia"].includes(p_metodo))
+    throw httpErr(400, "22023", `Método de pago inválido: ${p_metodo}`)
+  const p = db.pedidos.find((r) => r.id === p_pedido_id)
+  if (!p) throw httpErr(404, "P0002", "Pedido no encontrado")
+  const saldo = Number(p.precio_total) - Number(p.abono || 0)
+  if (monto > saldo + 0.009)
+    throw httpErr(400, "22023", `El abono no puede ser mayor que el saldo pendiente (L${saldo.toFixed(2)})`)
+  p[`pago_${p_metodo}`] = round2(Number(p[`pago_${p_metodo}`] || 0) + monto)
+  p.abono = round2(Number(p.abono || 0) + monto)
+  Object.assign(p, SCHEMA.pedidos.generated(p))
+  return send(res, 200, p)
+}
+
 async function handleRest(req, res, url) {
   const table = url.pathname.replace(/^\/rest\/v1\//, "")
+  if (table.startsWith("rpc/")) return handleRpc(req, res, table.slice(4))
   if (!SCHEMA[table]) throw httpErr(404, "42P01", `relation "public.${table}" does not exist`)
   const params = url.searchParams
   const prefer = req.headers["prefer"] || ""
